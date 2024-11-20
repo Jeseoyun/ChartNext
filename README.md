@@ -340,6 +340,120 @@ poetry shell
 <br />
 <br />
 
+## 실행 방법
+<details>
+<summary>접기/펼치기</summary>
+<div markdown="1">
+
+환경 : Ubuntu 22.04 (WSL2)
+파이썬 : 3.10.12
+
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
+pip 설치
+```bash
+sudo apt install python3-pip
+```
+
+poetry 설치
+```bash
+sudo apt install python3-poetry
+```
+
+postgresql 설치
+```bash
+sudo apt install postgresql postgresql-contrib
+```
+
+postgresql 시작
+```bash
+sudo service postgresql start
+```
+
+postgresql 접속 및 데이터베이스 생성
+```bash
+sudo -u postgres psql
+
+# PostgreSQL 프롬프트에서 실행할 명령어들:
+sudo -u postgres psql
+
+# PostgreSQL 프롬프트에서 실행할 명령어들:
+CREATE DATABASE chart_next;
+CREATE USER chart_next_user WITH PASSWORD '123qweasd';
+ALTER ROLE chart_next_user SET client_encoding TO 'utf8';
+ALTER ROLE chart_next_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE chart_next_user SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;
+\q
+```
+
+django 프로젝트 실행
+```bash
+cd backend
+poetry install
+poetry shell
+python manage.py migrate
+python manage.py runserver
+```
+
+vue 프로젝트 실행 (새로운 터미널 창에서 진행)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+
+</div>
+</details>
+
+
+<br />
+<br />
+
+## 트러블 슈팅
+<details>
+<summary>접기/펼치기</summary>
+<div markdown="1">
+
+### 1. poetry 인식 안 될 때
+```bash
+$ poetry --version
+
+bash: /usr/bin/poetry: No such file or directory
+```
+
+Poetry가 설치되었지만 PATH 설정이 필요한 상황.
+
+다음 단계를 실행하여 해결할 수 있다.
+
+<br />
+
+1. PATH에 Poetry 경로 추가
+```bash
+echo 'export PATH="$PATH:/home/사용자이름/.local/bin"' >> ~/.bashrc
+```
+
+2. 변경사항 적용
+```bash
+source ~/.bashrc
+```
+
+3. Poetry 버전 확인
+```bash
+poetry --version
+```
+
+
+</div>
+</details>
+
+
+<br />
+<br />
 
 ## Commit Rule
 `[Update] 변경사항` : 업데이트
