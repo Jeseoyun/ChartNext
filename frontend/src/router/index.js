@@ -6,6 +6,7 @@ import ChatbotView from '@/views/ChatbotView.vue'
 import NewsListView from '@/views/NewsListView.vue'
 import InterestListView from '@/views/InterestListView.vue'
 import InterestDetailView from '@/views/InterestDetailView.vue'
+import UserInitView from '@/views/UserInitView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +46,11 @@ const router = createRouter({
       name: 'InterestDetail',
       component: InterestDetailView,
       props: true
+    },
+    {
+      path: '/user-init',
+      name: 'UserInit',
+      component: UserInitView
     }
   ]
 })
