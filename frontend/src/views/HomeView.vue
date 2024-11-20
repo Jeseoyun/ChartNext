@@ -43,13 +43,13 @@ export default {
 
 <style scoped>
 @font-face {
-  font-family: 'GmarketSansBold';
-  src: url('@/assets/fonts/GmarketSansTTFBold.ttf') format('truetype');
+  font-family: 'AppleSDGothicNeoH';
+  src: url('@/assets/fonts/AppleSDGothicNeoH.ttf') format('truetype');
 }
 
 @font-face {
-  font-family: 'GmarketSansMedium';
-  src: url('@/assets/fonts/GmarketSansTTFMedium.ttf') format('truetype');
+  font-family: 'AppleSDGothicNeoB';
+  src: url('@/assets/fonts/AppleSDGothicNeoB.ttf') format('truetype');
 }
 
 .home {
@@ -59,6 +59,10 @@ export default {
   overflow: hidden;
   background-color: black;
   z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .background-video {
@@ -94,13 +98,22 @@ export default {
 }
 
 .text-content h1 {
-  font-size: 6rem;
+  font-size: 7rem;
   margin: 0;
+  opacity: 0;
+  transform: translateY(50px);
+  animation: slideUp 0.8s ease forwards;
+  font-family: 'AppleSDGothicNeoH', sans-serif;
 }
 
 .text-content p {
   font-size: 2rem;
   margin: -30px 10px 10px;
+  opacity: 0;
+  transform: translateY(50px);
+  animation: slideUp 0.8s ease forwards;
+  animation-delay: 0.3s;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
 }
 
 .start-button {
@@ -112,25 +125,90 @@ export default {
   color: white;
   font-size: 2rem;
   cursor: pointer;
-  font-family: 'GmarketSansMedium', sans-serif;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(123, 44, 181, 0.5);
+  opacity: 0;
+  transform: translateY(50px);
+  animation: slideUp 0.8s ease forwards;
+  animation-delay: 0.6s;
+}
+
+.start-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  transform: rotate(45deg);
+  transition: all 0.5s ease;
+  opacity: 0;
+}
+
+.start-button:hover {
+  box-shadow: 0 0 20px rgba(123, 44, 181, 0.8);
+}
+
+.start-button:hover::before {
+  opacity: 1;
+  animation: shine 1.5s infinite;
+}
+
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: rotate(45deg) translateX(-200%);
+  }
+  100% {
+    transform: rotate(45deg) translateX(200%);
+  }
 }
 
 .navbar {
   position: absolute;
-  top: 30px;
+  top: 42px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 20px;
-  font-family: 'GmarketSansMedium', sans-serif;
+  gap: 60px;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
 }
 
 .navbar button {
   background: transparent;
   border: none;
   color: white;
-  font-size: 18px;
+  font-size: 24px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.navbar button:hover {
+  background: linear-gradient(120deg, #9350ff, #765eff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .v-container, .v-main, .v-application {
