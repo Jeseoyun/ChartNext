@@ -73,17 +73,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',  # 추가
+    'django.contrib.sites',  
     'django_crontab',
 
     # 서드파티 앱들
     'rest_framework',
     'rest_framework.authtoken',
     'dj_rest_auth',
-    'allauth',  # 추가
-    'allauth.account',  # 추가
-    'allauth.socialaccount',  # 추가
-    'dj_rest_auth.registration',  # 추가
+    'allauth',  
+    'allauth.account',  
+    'allauth.socialaccount',  
+    'dj_rest_auth.registration',  
 
     # 사용자 정의 앱들
     'users',  
