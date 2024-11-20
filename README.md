@@ -363,6 +363,28 @@ poetry 설치
 sudo apt install python3-poetry
 ```
 
+nvm 설정
+
+1. nvm 설치
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+```
+
+2. 쉘 설정 재로드
+```bash
+source ~/.bashrc
+```
+
+3. Node.js LTS 버전 설치
+```bash
+nvm install --lts
+```
+
+4.Node.js LTS 버전을 기본으로 설정
+```bash
+nvm alias default lts
+```
+
 postgresql 설치
 ```bash
 sudo apt install postgresql postgresql-contrib
