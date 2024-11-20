@@ -24,6 +24,7 @@ beautifulsoup4 = "^4.12.3"
 openai = "^1.54.4"
 django-crontab = "^0.7.1"
 django-cors-headers = "^4.6.0"
+faker = "^33.0.0"
 
 
 [build-system]
