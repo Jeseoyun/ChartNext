@@ -23,12 +23,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CORS_ORIGIN_ALLOW_ALL = True  # CORS_ALLOW_ALL_ORIGINS 대신 사용
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
     'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5173'
 ]
 CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
     'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5173'
 ]
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -60,7 +64,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -84,6 +88,7 @@ INSTALLED_APPS = [
     'allauth.account',  
     'allauth.socialaccount',  
     'dj_rest_auth.registration',  
+    'allauth.socialaccount.providers.google',
 
     # 사용자 정의 앱들
     'users',  
@@ -227,3 +232,56 @@ LOGGING = {
         },
     },
 }
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+
+ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('VITE_GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('VITE_GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'VERIFIED_EMAIL': True,
+        'VERSION': 'v2.0',
+    }
+}
+
+# OAuth 관련 URL 설정 추가
+LOGIN_URL = 'account_login'
+LOGOUT_URL = 'account_logout'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# Social Auth 설정
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+
+# OAuth 설정 추가
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'read': 'Read scope',
+        'write': 'Write scope',
+        'groups': 'Access to your groups'
+    }
+}
+
+
