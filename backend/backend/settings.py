@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'users',  
     'companies',
     'corsheaders',
+    'stocks',
 ]
 
 SITE_ID = 1

@@ -25,4 +25,5 @@ urlpatterns = [
     path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
     path('api/companies/', include('companies.urls')),
+    path('api/stocks/', include('stocks.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
