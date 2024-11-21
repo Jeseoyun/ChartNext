@@ -9,8 +9,8 @@
         </div>
 
         <v-row>
-          <!-- 왼쪽 패널: 주식 선택 영역 -->
-          <v-col cols="12" md="8">
+          <!-- 주식 선택 영역 -->
+          <v-col cols="12">
             <!-- 검색창 -->
             <v-text-field
               v-model="searchQuery"
@@ -19,6 +19,29 @@
               clearable
               class="mb-4"
             ></v-text-field>
+
+            <!-- 선택된 기업 목록 -->
+            <v-row>
+              <v-col cols="12">
+                <v-list class="selected-stocks-list">
+                  <v-list-item
+                    v-for="stock in selectedStocks"
+                    :key="stock.code"
+                    :title="`${stock.name} (${stock.code})`"
+                    :subtitle="stock.category"
+                  >
+                    <template v-slot:append>
+                      <v-btn
+                        icon="mdi-close"
+                        size="xx-small"
+                        @click="removeStock(stock)"
+                        color="grey"
+                      ></v-btn>
+                    </template>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+            </v-row>
 
             <v-row>
               <!-- 국내 주식 섹션 -->
@@ -65,32 +88,6 @@
                 </v-card>
               </v-col>
             </v-row>
-          </v-col>
-
-          <!-- 오른쪽 패널: 선택된 항목 -->
-          <v-col cols="12" md="4">
-            <v-card>
-              <v-card-title class="text-center">선택된 기업</v-card-title>
-              <v-card-text>
-                <v-list>
-                  <v-list-item
-                    v-for="stock in selectedStocks"
-                    :key="stock.code"
-                    :title="`${stock.name} (${stock.code})`"
-                    :subtitle="stock.category"
-                  >
-                    <template v-slot:append>
-                      <v-btn
-                        icon="mdi-close"
-                        size="small"
-                        @click="removeStock(stock)"
-                        color="error"
-                      ></v-btn>
-                    </template>
-                  </v-list-item>
-                </v-list>
-              </v-card-text>
-            </v-card>
           </v-col>
         </v-row>
 
@@ -247,5 +244,12 @@ export default {
 
 .v-list-item:hover {
   cursor: pointer;
+}
+
+.selected-stocks-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
 }
 </style>

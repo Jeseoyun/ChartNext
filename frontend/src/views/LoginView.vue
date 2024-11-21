@@ -64,7 +64,7 @@ export default {
     async handleLogin() {
       try {
         await this.userStore.login(this.username, this.password);
-        this.$router.push({ name: 'Home' });
+        this.$router.push({ name: 'Main' });
       } catch (error) {
         console.error('로그인 실패:', error);
         // 에러 메시지 표시 등 추가 작업
