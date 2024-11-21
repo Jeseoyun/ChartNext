@@ -397,8 +397,6 @@ sudo service postgresql start
 
 postgresql 접속 및 데이터베이스 생성
 ```bash
-sudo -u postgres psql
-
 # PostgreSQL 프롬프트에서 실행할 명령어들:
 sudo -u postgres psql
 
@@ -420,6 +418,7 @@ poetry shell
 python manage.py migrate
 python manage.py runserver
 ```
+poetry install에서 오류날 경우 트러블 슈팅 참고
 
 vue 프로젝트 실행 (새로운 터미널 창에서 진행)
 ```bash
@@ -441,7 +440,24 @@ npm run dev
 <summary>접기/펼치기</summary>
 <div markdown="1">
 
-### 1. poetry 인식 안 될 때
+### 1. poetry 오류
+`sudo apt install python3-poetry` 로 설치한게 오류가 난 것.
+
+`curl -sSL https://install.python-poetry.org | python3 -` 로 설치하면 해결됨.
+
+우선 apt로 설치한 것을 삭제
+```bash
+sudo apt remove python3-poetry
+sudo apt purge python3-poetry
+sudo apt autoremove
+```
+
+curl 명령어로 poetry 설치
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+poetry 버전 확인
 ```bash
 $ poetry --version
 
@@ -456,7 +472,7 @@ Poetry가 설치되었지만 PATH 설정이 필요한 상황.
 
 1. PATH에 Poetry 경로 추가
 ```bash
-echo 'export PATH="$PATH:/home/사용자이름/.local/bin"' >> ~/.bashrc
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 ```
 
 2. 변경사항 적용
@@ -469,6 +485,7 @@ source ~/.bashrc
 poetry --version
 ```
 
+이제 poetry 명령어가 정상 작동할 것이다.
 
 </div>
 </details>
