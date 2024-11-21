@@ -27,4 +27,5 @@ urlpatterns = [
     path('api/auth/social/', include('allauth.socialaccount.urls')),
     path('api/companies/', include('companies.urls')),
     path('accounts/', include('allauth.urls')),
+    path('api/stocks/', include('stocks.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

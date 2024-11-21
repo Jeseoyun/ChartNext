@@ -62,9 +62,14 @@
 
 <script>
 import apiClient from '@/api';
+import { useUserStore } from '@/stores/user';
 
 export default {
   name: 'SignupView',
+  setup() {
+    const userStore = useUserStore();
+    return { userStore };
+  },
   data() {
     return {
       username: '',
@@ -129,13 +134,13 @@ export default {
           email: `${this.username}@example.com`
         };
         
-        console.log('회원가입 시도:', signupData);
+        const signupResponse = await apiClient.post('/auth/registration/', signupData);
+        console.log('회원가입 응답:', signupResponse.data);
         
-        const response = await apiClient.post('/auth/registration/', signupData);
+        await this.userStore.login(this.username, this.password1);
         
-        console.log('회원가입 응답:', response.data);
         alert('회원가입이 완료되었습니다.');
-        this.$router.push({ name: 'Login' });
+        this.$router.push({ name: 'UserInit' });
       } catch (error) {
         console.error('회원가입 실패 상세:', {
           error: error,

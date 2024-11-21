@@ -1,0 +1,68 @@
+[
+  {
+    "model": "stocks.stock",
+    "pk": 1,
+    "fields": {
+      "name": "삼성전자",
+      "code": "005930",
+      "market": "domestic",
+      "category": "전자",
+      "created_at": "2024-03-20T00:00:00Z"
+    }
+  },
+  {
+    "model": "stocks.stock",
+    "pk": 2,
+    "fields": {
+      "name": "SK하이닉스",
+      "code": "000660",
+      "market": "domestic",
+      "category": "반도체",
+      "created_at": "2024-03-20T00:00:00Z"
+    }
+  },
+  {
+    "model": "stocks.stock",
+    "pk": 3,
+    "fields": {
+      "name": "LG에너지솔루션",
+      "code": "373220",
+      "market": "domestic",
+      "category": "2차전지",
+      "created_at": "2024-03-20T00:00:00Z"
+    }
+  },
+  {
+    "model": "stocks.stock",
+    "pk": 4,
+    "fields": {
+      "name": "Apple",
+      "code": "AAPL",
+      "market": "international",
+      "category": "IT",
+      "created_at": "2024-03-20T00:00:00Z"
+    }
+  },
+  {
+    "model": "stocks.stock",
+    "pk": 5,
+    "fields": {
+      "name": "Microsoft",
+      "code": "MSFT",
+      "market": "international",
+      "category": "IT",
+      "created_at": "2024-03-20T00:00:00Z"
+    }
+  },
+  {
+    "model": "stocks.stock",
+    "pk": 6,
+    "fields": {
+      "name": "Tesla",
+      "code": "TSLA",
+      "market": "international",
+      "category": "자동차",
+      "created_at": "2024-03-20T00:00:00Z"
+    }
+  }
+] 
