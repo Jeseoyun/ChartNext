@@ -38,12 +38,23 @@ tar -xzvf hadoop-3.4.0.tar.gz
 sudo mv hadoop-3.4.0 /usr/local/hadoop
 rm hadoop-3.4.0.tar.gz
 
+# SSH 설치 및 설정
+echo "SSH 설치 및 설정 중..."
+sudo apt-get install -y openssh-server
+ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 0600 ~/.ssh/authorized_keys
+
 # Hadoop 환경 변수 설정
 echo "Hadoop 환경 변수 설정 중..."
 echo 'export HADOOP_HOME="/usr/local/hadoop"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin"' >> ~/.bashrc
 echo 'export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"' >> ~/.bashrc
 echo 'export PATH="$PATH:$JAVA_HOME/bin"' >> ~/.bashrc
+
+# Hadoop의 JAVA_HOME 설정
+echo "Hadoop의 JAVA_HOME 설정 중..."
+echo 'export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/"' >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh
 
 # Hadoop 설정 파일 수정
 echo "Hadoop 설정 파일 수정 중..."
@@ -97,17 +108,35 @@ sudo service postgresql start
 
 # PostgreSQL 데이터베이스 및 사용자 생성
 echo "PostgreSQL 데이터베이스 및 사용자 생성 중..."
-sudo -u postgres psql <<EOF
-CREATE DATABASE chart_next;
-CREATE USER chart_next_user WITH PASSWORD '123qweasd';
-ALTER ROLE chart_next_user SET client_encoding TO 'utf8';
-ALTER ROLE chart_next_user SET default_transaction_isolation TO 'read committed';
-ALTER ROLE chart_next_user SET timezone TO 'UTC';
-GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;
-\q
-EOF
+sudo -u postgres psql -c "CREATE DATABASE chart_next;"
+sudo -u postgres psql -c "CREATE USER chart_next_user WITH PASSWORD '123qweasd';"
+sudo -u postgres psql -c "ALTER ROLE chart_next_user SET client_encoding TO 'utf8';"
+sudo -u postgres psql -c "ALTER ROLE chart_next_user SET default_transaction_isolation TO 'read committed';"
+sudo -u postgres psql -c "ALTER ROLE chart_next_user SET timezone TO 'UTC';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;"
 
 # 변경 사항 적용
 source ~/.bashrc
 
-echo "설치가 완료되었습니다. 이제 Chart Next를 실행할 준비가 되었습니다."
+echo "설치가 완료되었습니다."
+echo "다음 단계를 순서대로 진행하세요:"
+echo ""
+echo "1. HDFS 초기화:"
+echo "   hdfs namenode -format"
+echo ""
+echo "2. HDFS 시작:"
+echo "   start-dfs.sh"
+echo ""
+echo "3. HDFS 실행 확인 (다음 프로세스들이 보여야 함):"
+echo "   jps"
+echo "   - NameNode"
+echo "   - DataNode"
+echo "   - SecondaryNameNode"
+echo ""
+echo "4. HDFS 디렉토리 구조 생성:"
+echo "   hdfs dfs -mkdir -p /news_data/raw"
+echo "   hdfs dfs -mkdir -p /news_data/stream"
+echo "   hdfs dfs -chmod -R 777 /news_data"
+echo ""
+echo "5. HDFS 웹 UI 확인:"
+echo "   http://localhost:9870"
