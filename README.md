@@ -126,6 +126,17 @@ npm install
 npm run dev
 ```
 
+
+### 기타
+크롤링 한 파일 내용 보기
+```bash
+hdfs dfs -cat /news_data/raw/articles.json
+```
+
+파일 내용을 로컬로 복사해서 보기
+```bash
+hdfs dfs -get /news_data/raw/articles.json ./local_articles.json
+```
 </div>
 </details>
 
