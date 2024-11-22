@@ -51,7 +51,7 @@
                   <v-card-text>
                     <v-list class="scrollable-list">
                       <v-list-item
-                        v-for="(stock, index) in filteredDomesticStocks"
+                        v-for="(stock, index) in domesticStocks"
                         :key="stock.code"
                         :value="stock"
                         :title="`${index + 1}. ${stock.name} (${stock.code})`"
@@ -73,7 +73,7 @@
                   <v-card-text>
                     <v-list class="scrollable-list">
                       <v-list-item
-                        v-for="(stock, index) in filteredInternationalStocks"
+                        v-for="(stock, index) in internationalStocks"
                         :key="stock.code"
                         :value="stock"
                         :title="`${index + 1}. ${stock.name} (${stock.code})`"
@@ -127,24 +127,6 @@ export default {
     const internationalStocks = computed(() => 
       stocks.value.filter(stock => stock.market === 'International').slice(0, 100)
     );
-
-    const filteredDomesticStocks = computed(() => {
-      if (!searchQuery.value) return domesticStocks.value;
-      const query = searchQuery.value.toLowerCase();
-      return domesticStocks.value.filter(stock => 
-        stock.name.toLowerCase().includes(query) || 
-        stock.code.toLowerCase().includes(query)
-      );
-    });
-
-    const filteredInternationalStocks = computed(() => {
-      if (!searchQuery.value) return internationalStocks.value;
-      const query = searchQuery.value.toLowerCase();
-      return internationalStocks.value.filter(stock => 
-        stock.name.toLowerCase().includes(query) || 
-        stock.code.toLowerCase().includes(query)
-      );
-    });
 
     const selectedStocks = computed(() => [
       ...selectedDomestic.value,
@@ -217,8 +199,6 @@ export default {
     return {
       domesticStocks,
       internationalStocks,
-      filteredDomesticStocks,
-      filteredInternationalStocks,
       selectedDomestic,
       selectedInternational,
       selectedStocks,
