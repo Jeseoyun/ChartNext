@@ -47,14 +47,14 @@
               <!-- 국내 주식 섹션 -->
               <v-col cols="12" md="6">
                 <v-card>
-                  <v-card-title class="text-center">국내 주식</v-card-title>
+                  <v-card-title class="text-center">국내 주식 Top 100</v-card-title>
                   <v-card-text>
-                    <v-list>
+                    <v-list class="scrollable-list">
                       <v-list-item
-                        v-for="stock in filteredDomesticStocks"
+                        v-for="(stock, index) in filteredDomesticStocks"
                         :key="stock.code"
                         :value="stock"
-                        :title="`${stock.name} (${stock.code})`"
+                        :title="`${index + 1}. ${stock.name} (${stock.code})`"
                         :subtitle="stock.category"
                         @click="toggleStock(stock, 'domestic')"
                         :class="{ 'selected-item': isSelected(stock) }"
@@ -69,14 +69,14 @@
               <!-- 해외 주식 섹션 -->
               <v-col cols="12" md="6">
                 <v-card>
-                  <v-card-title class="text-center">해외 주식</v-card-title>
+                  <v-card-title class="text-center">해외 주식 Top 100</v-card-title>
                   <v-card-text>
-                    <v-list>
+                    <v-list class="scrollable-list">
                       <v-list-item
-                        v-for="stock in filteredInternationalStocks"
+                        v-for="(stock, index) in filteredInternationalStocks"
                         :key="stock.code"
                         :value="stock"
-                        :title="`${stock.name} (${stock.code})`"
+                        :title="`${index + 1}. ${stock.name} (${stock.code})`"
                         :subtitle="stock.category"
                         @click="toggleStock(stock, 'international')"
                         :class="{ 'selected-item': isSelected(stock) }"
@@ -121,11 +121,11 @@ export default {
     const searchQuery = ref('');
 
     const domesticStocks = computed(() => 
-      stocks.value.filter(stock => stock.market === 'domestic')
+      stocks.value.filter(stock => stock.market === 'Domestic').slice(0, 100)
     );
 
     const internationalStocks = computed(() => 
-      stocks.value.filter(stock => stock.market === 'international')
+      stocks.value.filter(stock => stock.market === 'International').slice(0, 100)
     );
 
     const filteredDomesticStocks = computed(() => {
@@ -156,7 +156,7 @@ export default {
     };
 
     const toggleStock = (stock, type) => {
-      const selectedArray = type === 'domestic' ? selectedDomestic : selectedInternational;
+      const selectedArray = type === 'Domestic' ? selectedDomestic : selectedInternational;
       const index = selectedArray.value.findIndex(s => s.code === stock.code);
       
       if (index === -1) {
@@ -251,5 +251,10 @@ export default {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-start;
+}
+
+.scrollable-list {
+  max-height: 400px; /* 원하는 높이로 설정 */
+  overflow-y: auto;
 }
 </style>
