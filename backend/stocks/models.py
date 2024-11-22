@@ -10,7 +10,9 @@ class Stock(models.Model):
     name = models.CharField(max_length=100)  # 종목명
     code = models.CharField(max_length=10, unique=True)  # 종목코드
     market = models.CharField(max_length=20, choices=MARKET_CHOICES)  # 국내/해외 구분
-    category = models.CharField(max_length=50)  # 카테고리 (예: IT, 금융 등)
+    exchange = models.CharField(max_length=50)  # 거래소
+    sector = models.CharField(max_length=50)  # 섹터
+    industry = models.CharField(max_length=100)  # 산업
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
