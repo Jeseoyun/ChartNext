@@ -24,8 +24,33 @@
 </template>
 
 <script>
+import { onMounted } from 'vue'; // 수정: vue에서 onMounted 가져오기
+import { useRouter } from 'vue-router'; // vue-router에서 useRouter 가져오기
+import apiClient from '@/api'; // API 클라이언트 임포트
+
 export default {
   name: 'MainView',
+  setup() {
+    const router = useRouter();
+
+    const checkUserStocks = async () => {
+      try {
+        const response = await apiClient.get('/stocks/user-stocks/');
+        if (response.data.length === 0) {
+          alert('관심 주식이 없습니다. 초기 설정 페이지로 이동합니다.');
+          router.push({ name: 'UserInit' });
+        }
+      } catch (error) {
+        console.error('관심 주식 조회 실패:', error);
+      }
+    };
+
+    onMounted(() => {
+      checkUserStocks();
+    });
+
+    return {};
+  },
 };
 </script>
 
