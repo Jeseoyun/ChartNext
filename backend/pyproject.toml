@@ -26,6 +26,10 @@ django-cors-headers = "^4.6.0"
 pyjwt = "^2.10.0"
 cryptography = "^43.0.3"
 faker = "^33.0.0"
+selenium = "^4.26.1"
+webdriver-manager = "^4.0.2"
+hdfs3 = "^0.3.1"
+hdfs = "^2.7.3"
 
 
 [build-system]
