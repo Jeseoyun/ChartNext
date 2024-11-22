@@ -285,4 +285,5 @@ OAUTH2_PROVIDER = {
     }
 }
 
-
+# 데이터 파일 경로
+DATA_ROOT = os.path.join(BASE_DIR, 'data/')
