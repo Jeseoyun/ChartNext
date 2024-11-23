@@ -116,7 +116,7 @@
                 </v-card>
               </v-col>
 
-              <!-- 해�� 주식 섹션 -->
+              <!-- 해외 주식 섹션 -->
               <v-col cols="12" md="6">
                 <v-card>
                   <v-card-title class="text-center">해외 주식 Top 100</v-card-title>
@@ -143,7 +143,8 @@
 
         <div class="text-center mt-6">
           <v-btn
-            color="primary"
+            color="white"
+            class="black--text"
             size="large"
             :disabled="selectedStocks.length < 3"
             @click="handleSubmit"
@@ -239,7 +240,7 @@ export default {
         await Promise.all(promises);
         router.push({ name: 'Main' });
       } catch (error) {
-        console.error('관심 기업 등록 �����:', error);
+        console.error('관심 기업 등록 실패:', error);
         if (error.response?.status === 401) {
           router.push({ name: 'Login' });
         }
@@ -320,50 +321,170 @@ export default {
 </script>
 
 <style scoped>
+/* 기존 스타일 대체 */
 .fill-height {
-  min-height: calc(100vh - 64px);
+  min-height: 100vh;
+}
+
+.v-container {
+  background-image: url('@/assets/sign_background.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* 카드 스타일 수정 */
+.v-card {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  color: white !important;
+  border-radius: 8px;
+  box-shadow: 0px 0px 200px #6439ff60 !important;
+  backdrop-filter: blur(10px);
+}
+
+/* 텍스트 색상 수정 */
+.text-h4, .text-subtitle-1, .text-caption {
+  color: white !important;
+}
+
+/* 검색 결과 카드 스타일 */
+.search-results {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+.search-results .v-list-item {
+  color: white !important;
+}
+
+.search-results .v-list-subheader {
+  color: white !important;
+  background-color: rgba(100, 57, 255, 0.1) !important;
+  font-weight: bold;
+}
+
+/* 리스트 아이템 스타일 */
+.v-list-item {
+  color: white !important;
 }
 
 .selected-item {
-  background-color: var(--v-primary-lighten5);
-  border-left: 4px solid var(--v-primary-base);
+  background-color: rgba(100, 57, 255, 0.2) !important;
+  border-left: 4px solid #6439ff !important;
 }
 
 .v-list-item:hover {
   cursor: pointer;
+  background-color: rgba(100, 57, 255, 0.1) !important;
 }
 
-.selected-stocks-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-start;
-}
-
+/* 스크롤 리스트 */
 .scrollable-list {
   max-height: 400px;
   overflow-y: auto;
 }
 
+/* 선택된 주식 리스트 */
+.selected-stocks-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+  background-color: transparent !important;
+}
+
+/* 검색 필드 스타일 */
+:deep(.v-field__input) {
+  color: white !important;
+}
+
+:deep(.v-field__outline) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+:deep(.v-label) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 자동완성 스타일 제거 */
+:deep(input:-webkit-autofill),
+:deep(input:-webkit-autofill:hover),
+:deep(input:-webkit-autofill:focus),
+:deep(input:-webkit-autofill:active) {
+  -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+  -webkit-text-fill-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+  background-color: transparent !important;
+}
+
+/* 스크롤바 스타일링 */
+:deep(.scrollable-list::-webkit-scrollbar) {
+  width: 8px;
+}
+
+:deep(.scrollable-list::-webkit-scrollbar-track) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:deep(.scrollable-list::-webkit-scrollbar-thumb) {
+  background-color: rgba(100, 57, 255, 0.5);
+  border-radius: 4px;
+}
+
+:deep(.scrollable-list::-webkit-scrollbar-thumb:hover) {
+  background-color: rgba(100, 57, 255, 0.7);
+}
+
+/* 리스트 관련 스타일 수정/추가 */
+
+/* 리스트 컨테이너 배경 */
+.v-list {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+}
+
+/* 검색 결과 리스트 */
 .search-results {
-  position: absolute;
-  z-index: 1000;
-  width: 100%;
-  max-height: 300px;
-  overflow-y: auto;
-  background: white;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px);
 }
 
-.search-results .v-list-item {
-  cursor: pointer;
+.search-results .v-list {
+  background-color: transparent !important;
 }
 
-.search-results .v-list-item:hover {
-  background-color: var(--v-primary-lighten5);
+/* 선택된 주식 리스트 */
+.selected-stocks-list {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  padding: 8px;
+  border-radius: 8px;
 }
 
+/* 스크롤 리스트 배경 */
+.scrollable-list {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 리스트 아이템 hover 효과 */
+.v-list-item:hover {
+  background-color: rgba(100, 57, 255, 0.2) !important;
+}
+
+/* 선택된 아이템 스타일 */
+.selected-item {
+  background-color: rgba(100, 57, 255, 0.3) !important;
+  border-left: 4px solid #6439ff !important;
+}
+
+/* 카드 내부 리스트 영역 */
+.v-card-text {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 0 0 8px 8px;
+}
+
+/* 리스트 서브헤더 */
 .v-list-subheader {
-  background-color: var(--v-primary-lighten5);
-  font-weight: bold;
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  color: white !important;
 }
 </style>
