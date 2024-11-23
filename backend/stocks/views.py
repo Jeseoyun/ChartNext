@@ -110,9 +110,11 @@ def ml_search_stocks(request):
         stock = Stock.objects.get(id=stock_id)
         results.append({
             'id': stock.id,
+            'code': stock.code,
             'name': stock.name,
             'industry': stock.industry,
             'sector': stock.sector,
+            'market': stock.market,
             'similarity': float(similarities[index]),
         })
 
