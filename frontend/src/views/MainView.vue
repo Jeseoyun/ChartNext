@@ -3,9 +3,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import apiClient from '@/api';
+import NavigationBar from '@/components/NavigationBar.vue';
 
-const router = useRouter();
-const userStore = useUserStore();
 const userStocks = ref([]);
 
 // 사용자의 관심 종목 로드
@@ -16,40 +15,6 @@ const loadUserStocks = async () => {
   } catch (error) {
     console.error('관심 종목 로드 실패:', error);
   }
-};
-
-const goToStockDetail = (stock) => {
-  if (stock) {
-    router.push({ 
-      name: 'StockDetail',
-      state: { selectedStock: stock }
-    });
-  }
-};
-
-const refreshMain = () => {
-  router.go(0);
-};
-
-const goStocks = () => {
-  router.push({ name: 'StockDetail' });
-};
-
-const goNews = () => {
-  router.push({ name: 'News' });
-};
-
-const handleLogout = async () => {
-  try {
-    await userStore.logout();
-    router.push({ name: 'Home' });
-  } catch (error) {
-    console.error('로그아웃 실패:', error);
-  }
-};
-
-const editInterests = () => {
-  router.push({ name: 'Interests' });
 };
 
 onMounted(() => {
@@ -64,21 +29,8 @@ onMounted(() => {
         <source src="@/assets/main_background.mp4" type="video/mp4" />
       </video>
       <div class="content">
-        <div class="header">
-          <img src="@/assets/logo.png" alt="Logo" class="logo" @click="refreshMain" />
-          <div class="header-right">
-            <button class="edit-interests" @click="editInterests">
-              <v-icon>mdi-pencil</v-icon>
-              관심 기업 수정
-            </button>
-            <nav class="navbar">
-              <button @click="goStocks">종목</button>
-              <button @click="goNews">뉴스</button>
-              <button @click="handleLogout">로그아웃</button>
-            </nav>
-          </div>
-        </div>
-
+        <navigation-bar />
+        
         <div class="dashboard">
           <v-card class="dashboard-card">
             <v-card-title>오늘의 이슈</v-card-title>
@@ -160,66 +112,6 @@ onMounted(() => {
   padding: 20px;
   display: flex;
   flex-direction: column;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.logo {
-  height: 100px;
-  cursor: pointer;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.edit-interests {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'AppleSDGothicNeoB', sans-serif;
-  padding: 8px 16px;
-  border-radius: 20px;
-}
-
-.edit-interests:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #9350ff;
-}
-
-.navbar {
-  display: flex;
-  gap: 30px;
-}
-
-.navbar button {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'AppleSDGothicNeoB', sans-serif;
-}
-
-.navbar button:hover {
-  background: linear-gradient(120deg, #9350ff, #765eff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .dashboard {
