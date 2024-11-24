@@ -23,6 +23,29 @@ const selectStock = (stock) => {
   selectedStock.value = stock;
 };
 
+// 관심 기업 추가/삭제 핸들러
+const toggleInterest = async (stock) => {
+  try {
+    if (isInterested(stock)) {
+      // 관심 기업 삭제
+      await apiClient.delete(`/stocks/user-stocks/${stock.code}/`);
+    } else {
+      // 관심 기업 추가
+      await apiClient.post('/stocks/user-stocks/', {
+        stock_code: stock.code
+      });
+    }
+    await loadUserStocks(); // 목록 새로고침
+  } catch (error) {
+    console.error('관심 기업 처리 실패:', error);
+  }
+};
+
+// 관심 기업 여부 확인
+const isInterested = (stock) => {
+  return userStocks.value.some(s => s.code === stock.code);
+};
+
 // 사용자의 관심 종목 로드
 const loadUserStocks = async () => {
   try {
@@ -59,8 +82,16 @@ onMounted(() => {
           <v-row>
             <v-col cols="12" md="9">
               <v-card class="chart-card">
-                <v-card-title v-if="selectedStock">
-                  {{ selectedStock.name }} ({{ selectedStock.code }})
+                <v-card-title v-if="selectedStock" class="d-flex align-center justify-space-between">
+                  <span>{{ selectedStock.name }} ({{ selectedStock.code }})</span>
+                  <v-btn
+                    icon
+                    variant="text"
+                    :color="isInterested(selectedStock) ? 'white' : 'grey-darken-2'"
+                    @click="toggleInterest(selectedStock)"
+                  >
+                    <v-icon>{{ isInterested(selectedStock) ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
+                  </v-btn>
                 </v-card-title>
                 <v-card-text>
                   <stock-chart
@@ -87,6 +118,15 @@ onMounted(() => {
                       @click="selectStock(stock)"
                       hover
                     >
+                      <template v-slot:append>
+                        <v-btn
+                          icon="mdi-heart"
+                          size="small"
+                          color="white"
+                          variant="text"
+                          @click.stop="toggleInterest(stock)"
+                        ></v-btn>
+                      </template>
                     </v-list-item>
                   </v-list>
                 </v-card-text>
