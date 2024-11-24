@@ -8,6 +8,7 @@ import NewsListView from '@/views/NewsListView.vue'
 import InterestListView from '@/views/InterestListView.vue'
 import InterestDetailView from '@/views/InterestDetailView.vue'
 import UserInitView from '@/views/UserInitView.vue'
+import StockDetailView from '@/views/StockDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,6 +58,11 @@ const router = createRouter({
       path: '/user-init',
       name: 'UserInit',
       component: UserInitView
+    },
+    {
+      path: '/stock',
+      name: 'StockDetail',
+      component: StockDetailView
     }
   ]
 })
