@@ -11,64 +11,12 @@
         <v-row>
           <!-- 주식 선택 영역 -->
           <v-col cols="12">
-            <!-- 검색창 -->
-            <v-text-field
-              v-model="searchQuery"
-              label="기업명 또는 종목코드로 검색"
-              prepend-inner-icon="mdi-magnify"
-              clearable
-              class="mb-4"
-              @input="handleSearch"
-              @click:clear="clearSearchResults"
-            >
-              <template v-slot:append-inner>
-                <v-progress-circular
-                  v-if="isSearching"
-                  indeterminate
-                  size="20"
-                ></v-progress-circular>
-              </template>
-            </v-text-field>
-
-            <!-- 검색 결과 드롭다운 -->
-            <v-card
-              v-if="(normalSearchResults.length > 0 || mlSearchResults.length > 0)"
-              class="search-results mb-4"
-              elevation="2"
-            >
-              <v-list class="scrollable-list">
-                <!-- 일반 검색 결과 -->
-                <template v-if="normalSearchResults.length > 0">
-                  <v-list-subheader>일반 검색 결과</v-list-subheader>
-                  <v-list-item
-                    v-for="result in normalSearchResults"
-                    :key="`normal-${result.code}`"
-                    :title="`${result.name} (${result.code})`"
-                    :subtitle="`${result.industry} | ${result.sector}`"
-                    @click="handleSearchResultClick(result)"
-                    hover
-                    v-show="!isSelected(result)"
-                  >
-                  </v-list-item>
-                </template>
-
-                <!-- ML 검색 결과 -->
-                <template v-if="mlSearchResults.length > 0">
-                  <v-divider v-if="normalSearchResults.length > 0"></v-divider>
-                  <v-list-subheader>유사도 기반 검색 결과</v-list-subheader>
-                  <v-list-item
-                    v-for="result in mlSearchResults"
-                    :key="`ml-${result.code}`"
-                    :title="`${result.name} (${result.code})`"
-                    :subtitle="`${result.industry} | ${result.sector} (유사도: ${(result.similarity * 100).toFixed(1)}%)`"
-                    @click="handleSearchResultClick(result)"
-                    hover
-                    v-show="!isSelected(result)"
-                  >
-                  </v-list-item>
-                </template>
-              </v-list>
-            </v-card>
+            <!-- 검색창을 SearchBar 컴포넌트로 교체 -->
+            <search-bar
+              @result-selected="handleSearchResultClick"
+              :selected-stocks="selectedStocks"
+              :hide-selected="true"
+            />
 
             <!-- 선택된 기업 목록 -->
             <v-row>
@@ -161,19 +109,18 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '@/api';
-import { debounce } from 'lodash';
+import SearchBar from '@/components/SearchBar.vue';
 
 export default {
   name: 'UserInitView',
+  components: {
+    SearchBar,
+  },
   setup() {
     const router = useRouter();
     const stocks = ref([]);
     const selectedDomestic = ref([]);
     const selectedInternational = ref([]);
-    const searchQuery = ref('');
-    const normalSearchResults = ref([]);
-    const mlSearchResults = ref([]);
-    const isSearching = ref(false);
 
     const domesticStocks = computed(() => 
       stocks.value.filter(stock => stock.market === 'Domestic').slice(0, 100)
@@ -247,51 +194,9 @@ export default {
       }
     };
 
-    const handleSearch = debounce(async () => {
-      if (!searchQuery.value || searchQuery.value.length < 2) {
-        normalSearchResults.value = [];
-        mlSearchResults.value = [];
-        return;
-      }
-
-      isSearching.value = true;
-      try {
-        // 일반 검색과 ML 검색 동시 실행
-        const [searchResponse, mlSearchResponse] = await Promise.all([
-          apiClient.get('/stocks/stocks/search/', {
-            params: { query: searchQuery.value }
-          }),
-          apiClient.get('/stocks/stocks/ml-search/', {
-            params: { query: searchQuery.value }
-          })
-        ]);
-
-        // 각각의 검색 결과를 별도로 저장
-        normalSearchResults.value = searchResponse.data.results.slice(0, 5); // 상위 5개
-        
-        // ML 검색 결과에서 유사도 40% 이상인 결과만 필터링
-        mlSearchResults.value = mlSearchResponse.data.results
-          .filter(result => result.similarity >= 0.4); // 40% = 0.4
-      } catch (error) {
-        console.error('검색 실패:', error);
-        normalSearchResults.value = [];
-        mlSearchResults.value = [];
-      } finally {
-        isSearching.value = false;
-      }
-    }, 300);
-
     const handleSearchResultClick = (stock) => {
       const type = stock.market === 'Domestic' ? 'domestic' : 'international';
       toggleStock(stock, type);
-      normalSearchResults.value = []; // 결과 목록 닫기
-      mlSearchResults.value = []; // 결과 목록 닫기
-      searchQuery.value = ''; // 검색어 초기화
-    };
-
-    const clearSearchResults = () => {
-      normalSearchResults.value = [];
-      mlSearchResults.value = [];
     };
 
     onMounted(() => {
@@ -304,17 +209,11 @@ export default {
       selectedDomestic,
       selectedInternational,
       selectedStocks,
-      searchQuery,
       handleSubmit,
       toggleStock,
       removeStock,
       isSelected,
-      normalSearchResults,
-      mlSearchResults,
-      isSearching,
-      handleSearch,
       handleSearchResultClick,
-      clearSearchResults,
     };
   },
 };
@@ -348,7 +247,7 @@ export default {
 
 /* 검색 결과 카드 스타일 */
 .search-results {
-  background-color: rgba(0, 0, 0, 0.1) !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
   backdrop-filter: blur(10px);
 }
 
@@ -486,5 +385,14 @@ export default {
 .v-list-subheader {
   background-color: rgba(0, 0, 0, 0.3) !important;
   color: white !important;
+}
+
+/* 검색 결과 리스트 스타일 수정 */
+:deep(.v-list-item-title) {
+  color: white !important;
+}
+
+:deep(.v-list-item-subtitle) {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 </style>
