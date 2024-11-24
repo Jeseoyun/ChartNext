@@ -1,3 +1,96 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import apiClient from '@/api';
+import SearchBar from '@/components/SearchBar.vue';
+
+const router = useRouter();
+const stocks = ref([]);
+const selectedDomestic = ref([]);
+const selectedInternational = ref([]);
+
+const domesticStocks = computed(() => 
+  stocks.value.filter(stock => stock.market === 'Domestic').slice(0, 100)
+);
+
+const internationalStocks = computed(() => 
+  stocks.value.filter(stock => stock.market === 'International').slice(0, 100)
+);
+
+const selectedStocks = computed(() => [
+  ...selectedDomestic.value,
+  ...selectedInternational.value
+]);
+
+const isSelected = (stock) => {
+  return selectedStocks.value.some(s => s.code === stock.code);
+};
+
+const toggleStock = (stock, type) => {
+  const selectedArray = type === 'Domestic' ? selectedDomestic : selectedInternational;
+  const index = selectedArray.value.findIndex(s => s.code === stock.code);
+  
+  if (index === -1) {
+    selectedArray.value.push(stock);
+  } else {
+    selectedArray.value.splice(index, 1);
+  }
+};
+
+const removeStock = (stock) => {
+  const domesticIndex = selectedDomestic.value.findIndex(s => s.code === stock.code);
+  if (domesticIndex !== -1) {
+    selectedDomestic.value.splice(domesticIndex, 1);
+    return;
+  }
+  
+  const internationalIndex = selectedInternational.value.findIndex(s => s.code === stock.code);
+  if (internationalIndex !== -1) {
+    selectedInternational.value.splice(internationalIndex, 1);
+  }
+};
+
+const fetchStocks = async () => {
+  try {
+    const response = await apiClient.get('/stocks/stocks/');
+    stocks.value = response.data;
+  } catch (error) {
+    console.error('주식 데이터 로드 실패:', error);
+    if (error.response?.status === 401) {
+      router.push({ name: 'Login' });
+    }
+  }
+};
+
+const handleSubmit = async () => {
+  try {
+    // 선택된 주식들을 user_stock 테이블에 저장
+    const promises = selectedStocks.value.map(stock => 
+      apiClient.post('/stocks/user-stocks/', {
+        stock_code: stock.code
+      })
+    );
+    
+    await Promise.all(promises);
+    router.push({ name: 'Main' });
+  } catch (error) {
+    console.error('관심 기업 등록 실패:', error);
+    if (error.response?.status === 401) {
+      router.push({ name: 'Login' });
+    }
+  }
+};
+
+const handleSearchResultClick = (stock) => {
+  const type = stock.market === 'Domestic' ? 'domestic' : 'international';
+  toggleStock(stock, type);
+};
+
+onMounted(() => {
+  fetchStocks();
+});
+</script>
+
 <template>
   <v-container fluid class="fill-height">
     <v-row align="center" justify="center">
@@ -128,120 +221,6 @@
     </v-row>
   </v-container>
 </template>
-
-<script>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import apiClient from '@/api';
-import SearchBar from '@/components/SearchBar.vue';
-
-export default {
-  name: 'UserInitView',
-  components: {
-    SearchBar,
-  },
-  setup() {
-    const router = useRouter();
-    const stocks = ref([]);
-    const selectedDomestic = ref([]);
-    const selectedInternational = ref([]);
-
-    const domesticStocks = computed(() => 
-      stocks.value.filter(stock => stock.market === 'Domestic').slice(0, 100)
-    );
-
-    const internationalStocks = computed(() => 
-      stocks.value.filter(stock => stock.market === 'International').slice(0, 100)
-    );
-
-    const selectedStocks = computed(() => [
-      ...selectedDomestic.value,
-      ...selectedInternational.value
-    ]);
-
-    const isSelected = (stock) => {
-      return selectedStocks.value.some(s => s.code === stock.code);
-    };
-
-    const toggleStock = (stock, type) => {
-      const selectedArray = type === 'Domestic' ? selectedDomestic : selectedInternational;
-      const index = selectedArray.value.findIndex(s => s.code === stock.code);
-      
-      if (index === -1) {
-        selectedArray.value.push(stock);
-      } else {
-        selectedArray.value.splice(index, 1);
-      }
-    };
-
-    const removeStock = (stock) => {
-      const domesticIndex = selectedDomestic.value.findIndex(s => s.code === stock.code);
-      if (domesticIndex !== -1) {
-        selectedDomestic.value.splice(domesticIndex, 1);
-        return;
-      }
-      
-      const internationalIndex = selectedInternational.value.findIndex(s => s.code === stock.code);
-      if (internationalIndex !== -1) {
-        selectedInternational.value.splice(internationalIndex, 1);
-      }
-    };
-
-    const fetchStocks = async () => {
-      try {
-        const response = await apiClient.get('/stocks/stocks/');
-        stocks.value = response.data;
-      } catch (error) {
-        console.error('주식 데이터 로드 실패:', error);
-        if (error.response?.status === 401) {
-          router.push({ name: 'Login' });
-        }
-      }
-    };
-
-    const handleSubmit = async () => {
-      try {
-        // 선택된 주식들을 user_stock 테이블에 저장
-        const promises = selectedStocks.value.map(stock => 
-          apiClient.post('/stocks/user-stocks/', {
-            stock_code: stock.code
-          })
-        );
-        
-        await Promise.all(promises);
-        router.push({ name: 'Main' });
-      } catch (error) {
-        console.error('관심 기업 등록 실패:', error);
-        if (error.response?.status === 401) {
-          router.push({ name: 'Login' });
-        }
-      }
-    };
-
-    const handleSearchResultClick = (stock) => {
-      const type = stock.market === 'Domestic' ? 'domestic' : 'international';
-      toggleStock(stock, type);
-    };
-
-    onMounted(() => {
-      fetchStocks();
-    });
-
-    return {
-      domesticStocks,
-      internationalStocks,
-      selectedDomestic,
-      selectedInternational,
-      selectedStocks,
-      handleSubmit,
-      toggleStock,
-      removeStock,
-      isSelected,
-      handleSearchResultClick,
-    };
-  },
-};
-</script>
 
 <style scoped>
 /* 기존 스타일을 InterestListView 스타일로 업데이트 */
