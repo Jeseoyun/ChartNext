@@ -81,7 +81,7 @@ def user_stocks(request):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
+# @permission_classes([permissions.IsAuthenticated])
 def search_stocks(request):
     query = request.GET.get('query', '')
     # 문자열 매치 알고리즘
@@ -90,7 +90,7 @@ def search_stocks(request):
     return Response({'results': serializer.data})
 
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
+# @permission_classes([permissions.IsAuthenticated])
 def ml_search_stocks(request):
     query = request.GET.get('query', '')
     if not query:
