@@ -97,320 +97,18 @@ git push
 <br />
 <br />
 
-## 환경 설정
-<details>
-<summary>접기/펼치기</summary>
-<div markdown="1">
-
-## 1. Hadoop 설치 및 설정
-
-### 1.1 Java 설치
-
-```bash
-sudo apt-get update
-sudo apt-get install default-jdk
-```
-
-### 1.2 Hadoop 다운로드 및 설치
-
-```bash
-wget https://downloads.apache.org/hadoop/common/hadoop-3.4.0/hadoop-3.4.0.tar.gz
-tar -xzvf hadoop-3.4.0.tar.gz
-sudo mv hadoop-3.4.0 /usr/local/hadoop
-```
-
-### 1.3 Hadoop 환경 변수 설정
-
-~/.bashrc 파일에 추가:
-
-```bash
-# echo 'export PATH=$PATH:/your/custom/path' >> ~/.bashrc
-# Hadoop Setting
-echo 'export HADOOP_HOME="/usr/local/hadoop"' >> ~/.bashrc
-echo 'export PATH="$PATH:$HADOOP_HOME/bin"' >> ~/.bashrc
-echo 'export PATH="$PATH:$HADOOP_HOME/sbin"' >> ~/.bashrc
-echo 'export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"' >> ~/.bashrc
-echo 'export PATH="$PATH:$JAVA_HOME/bin"' >> ~/.bashrc
-```
-
-변경사항 적용:
-
-```bash
-source ~/.bashrc
-```
-
-### 1.4 Hadoop 설정 파일 수정
-
-#### core-site.xml 설정
-<!--
-```bash
-nano $HADOOP_HOME/etc/hadoop/core-site.xml
-```
-
-```xml
-<configuration>
-    <property>
-        <name>fs.defaultFS</name>
-        <value>hdfs://localhost:9000</value>
-    </property>
-</configuration>
-```
--->
-
-```bash
-cat <<EOF > $HADOOP_HOME/etc/hadoop/core-site.xml
-<configuration>
-    <property>
-        <name>fs.defaultFS</name>
-        <value>hdfs://localhost:9000</value>
-    </property>
-</configuration>
-EOF
-```
-
-
-#### hdfs-site.xml 설정
-
-<!--
-```bash
-nano $HADOOP_HOME/etc/hadoop/hdfs-site.xml
-```
-
-- 사용자이름 부분에 본인의 리눅스 사용자 이름을 입력하세요.
-
-```xml
-<configuration>
-  <property>
-    <name>dfs.replication</name>
-    <value>1</value>
-  </property>
-  <property>
-    <name>dfs.namenode.name.dir</name>
-    <value>file:///home/사용자이름/hadoopdata/hdfs/namenode</value>
-  </property>
-  <property>
-    <name>dfs.datanode.data.dir</name>
-    <value>file:///home/사용자이름/hadoopdata/hdfs/datanode</value>
-  </property>
-</configuration>
-```
--->
-
-```bash
-cat <<EOF > $HADOOP_HOME/etc/hadoop/hdfs-site.xml
-<configuration>
-  <property>
-    <name>dfs.replication</name>
-    <value>1</value>
-  </property>
-  <property>
-    <name>dfs.namenode.name.dir</name>
-    <value>file:///home/사용자이름/hadoopdata/hdfs/namenode</value>
-  </property>
-  <property>
-    <name>dfs.datanode.data.dir</name>
-    <value>file:///home/사용자이름/hadoopdata/hdfs/datanode</value>
-  </property>
-</configuration>
-EOF
-```
-
-### 1.5 SSH 설정
-
-```bash
-sudo apt-get install openssh-server
-```
-
-### 1.6 JAVA_HOME 설정
-<!-- 
-```bash
-nano $HADOOP_HOME/etc/hadoop/hadoop-env.sh
-```
-
-```bash
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
-``` 
--->
-```bash
-echo 'export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/"' >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
-```
-
-### 1.7 HDFS 데이터 디렉토리 생성
-
-```bash
-mkdir -p ~/hadoopdata/hdfs/namenode
-mkdir -p ~/hadoopdata/hdfs/datanode
-```
-
-### 1.8 HDFS 포맷
-
-```bash
-hdfs namenode -format
-```
-
-### 1.8-1 ssh 키 생성
-ssh-keygen -t rsa
-cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-
-### 1.9 HDFS 데몬 시작
-
-```bash
-start-dfs.sh
-```
-
-#### 1.9.1 데몬 실행 확인
-
-```bash
-jps
-```
-
-`NameNode`, `DataNode`, `SecondaryNameNode`가 실행 중인지 확인합니다.
-
-### 1.10 HDFS 사용해보기
-
-#### 1.10.1 디렉토리 생성
-
-```bash
-hdfs dfs -mkdir /user
-hdfs dfs -mkdir /user/사용자이름
-```
-
-#### 1.10.2 파일 목록 확인
-
-```bash
-hdfs dfs -ls /user/사용자이름/
-```
-
-### 1.11 HDFS 데몬 종료
-
-```bash
-stop-dfs.sh
-```
-
-## 2. Spark 설치 및 설정
-
-### 2.1 Spark 다운로드 및 설치
-
-1. Apache Spark 공식 사이트에서 파일 다운로드
-```bash
-wget https://dlcdn.apache.org/spark/spark-3.5.3/spark-3.5.3-bin-hadoop3.tgz
-```
-
-2. 압축 해제 및 설치:
-```bash
-tar xvzf spark-3.5.3-bin-hadoop3.tgz
-sudo mv spark-3.5.3-bin-hadoop3 /usr/local/spark
-```
-
-### 2.2 Spark 환경 변수 설정
-
-~/.bashrc 파일에 추가:
-
-```bash
-# Spark Setting
-echo 'export SPARK_HOME="/usr/local/spark"' >> ~/.bashrc
-echo 'export PATH="$PATH:$SPARK_HOME/bin"' >> ~/.bashrc
-```
-
-변경사항 적용:
-
-```bash
-source ~/.bashrc
-```
-
-## 3. 프로젝트 의존성 관리
-
-Poetry를 사용하여 프로젝트 의존성을 관리합니다.
-
-```bash
-# Poetry 설치 (필요한 경우)
-curl -sSL https://install.python-poetry.org | python3 -
-
-# 의존성 설치 (pjt폴더로 이동 후)
-poetry install
-
-# 가상환경 활성화
-poetry shell
-```
-
-</div>
-</details>
-
-
-<br />
-<br />
-
 ## 실행 방법
 <details>
 <summary>접기/펼치기</summary>
 <div markdown="1">
 
-환경 : Ubuntu 22.04 (WSL2)
-파이썬 : 3.10.12
-
+### 설치 스크립트 실행
 ```bash
-sudo apt update
-sudo apt upgrade
+cd scripts
+./install.sh
 ```
 
-pip 설치
-```bash
-sudo apt install python3-pip
-```
-
-poetry 설치
-```bash
-sudo apt install python3-poetry
-```
-
-nvm 설정
-
-1. nvm 설치
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-```
-
-2. 쉘 설정 재로드
-```bash
-source ~/.bashrc
-```
-
-3. Node.js LTS 버전 설치
-```bash
-nvm install --lts
-```
-
-4.Node.js LTS 버전을 기본으로 설정
-```bash
-nvm alias default lts
-```
-
-postgresql 설치
-```bash
-sudo apt install postgresql postgresql-contrib
-```
-
-postgresql 시작
-```bash
-sudo service postgresql start
-```
-
-postgresql 접속 및 데이터베이스 생성
-```bash
-# PostgreSQL 프롬프트에서 실행할 명령어들:
-sudo -u postgres psql
-
-# PostgreSQL 프롬프트에서 실행할 명령어들:
-CREATE DATABASE chart_next;
-CREATE USER chart_next_user WITH PASSWORD '123qweasd';
-ALTER ROLE chart_next_user SET client_encoding TO 'utf8';
-ALTER ROLE chart_next_user SET default_transaction_isolation TO 'read committed';
-ALTER ROLE chart_next_user SET timezone TO 'UTC';
-GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;
-\q
-```
-
-django 프로젝트 실행
+### django 프로젝트 실행
 ```bash
 cd backend
 poetry install
@@ -420,13 +118,13 @@ python manage.py runserver
 ```
 poetry install에서 오류날 경우 트러블 슈팅 참고
 
-vue 프로젝트 실행 (새로운 터미널 창에서 진행)
+### vue 프로젝트 실행 
+> (새로운 터미널 창에서 진행)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
 
 </div>
 </details>
@@ -487,9 +185,43 @@ poetry --version
 
 이제 poetry 명령어가 정상 작동할 것이다.
 
+
+### 2. jps 했을 때, DataNode 및 NamenNode가 없는 경우
+클러스터 ID의 불일치 문제 (이전에 작업한 것과 겹치는 경우 등)
+
+1. 먼저 HDFS를 중지
+```bash
+stop-dfs.sh
+```
+
+2. 기존의 데이터 디렉토리를 삭제
+```bash
+rm -rf ~/hadoopdata/hdfs/namenode
+rm -rf ~/hadoopdata/hdfs/datanode
+```
+
+3. NameNode를 다시 포맷
+```bash
+hdfs namenode -format
+```
+
+4. HDFS를 시작
+```bash
+start-dfs.sh
+```
+
+5. 프로세스 확인
+```bash
+jps
+```
+
+이제 다음 프로세스들이 보임
+- NameNode
+- DataNode
+- SecondaryNameNode
+
 </div>
 </details>
-
 
 <br />
 <br />
