@@ -13,41 +13,75 @@ from .utils import get_latest_news
 import openai
 from django.conf import settings
 from .ml_models import train_models  
-
-# Create your views here.
-
-class UserInterestViewSet(viewsets.ModelViewSet):
-    serializer_class = UserInterestSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return UserInterest.objects.filter(user=self.request.user)
-
-class CompanyViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Company.objects.all()
-    serializer_class = CompanySerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['name', 'ticker']
+import FinanceDataReader as fdr
+from django.http import JsonResponse
+import yfinance as yf
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-def stock_data(request, ticker):
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)  # 지난 1년간 데이터
+def stock_data(request):
+    stock_code = request.GET.get('stock_code', '')
+    period = request.GET.get('period', '6mo')
+
+    if not stock_code:
+        return Response({'error': 'stock_code is required'}, status=400)
+
     try:
-        df = web.DataReader(ticker, 'yahoo', start_date, end_date)
-        df.reset_index(inplace=True)
-        df['Date'] = df['Date'].dt.strftime('%Y-%m-%d')
-        data = df[['Date', 'Close']].to_dict(orient='records')
-        return Response({'ticker': ticker, 'data': data})
-    except Exception as e:
-        return Response({'error': str(e)}, status=400)
+        # 기간을 날짜로 변환
+        end_date = datetime.now()
+        if period == '1d':
+            start_date = end_date - timedelta(days=1)
+        elif period == '5d':
+            start_date = end_date - timedelta(days=5)
+        elif period == '1mo':
+            start_date = end_date - timedelta(days=30)
+        elif period == '3mo':
+            start_date = end_date - timedelta(days=90)
+        elif period == '6mo':
+            start_date = end_date - timedelta(days=180)
+        elif period == '1y':
+            start_date = end_date - timedelta(days=365)
+        elif period == '2y':
+            start_date = end_date - timedelta(days=730)
+        elif period == '5y':
+            start_date = end_date - timedelta(days=1825)
+        else:  # max
+            start_date = datetime(1990, 1, 1)
 
+        # 주식 코드가 숫자로만 이루어져 있는지 확인 (한국 주식)
+        is_korean = stock_code.isdigit()
+        
+        if is_korean:
+            df = fdr.DataReader(stock_code, start_date, end_date)
+        else:
+            # yfinance를 사용하여 해외 주식 데이터 가져오기
+            ticker = yf.Ticker(stock_code)
+            df = ticker.history(start=start_date, end=end_date)
+        
+        if df.empty:
+            return Response({'error': 'No data found for the given stock code'}, status=404)
+            
+        # 인덱스를 데이터 컬럼으로 변환
+        df = df.reset_index()
+        
+        # 날짜 형식 변환
+        df['Date'] = df['Date'].dt.strftime('%Y-%m-%d')
+        
+        # 필요한 컬럼만 선택하고 컬럼명 통일
+        if is_korean:
+            result = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].to_dict('records')
+        else:
+            # yfinance의 컬럼명 통일
+            result = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].to_dict('records')
+        
+        return Response(result)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-def stock_prediction(request, ticker):
+def stock_prediction(request, stock_code):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365)  # 지난 1년간 데이터
 
