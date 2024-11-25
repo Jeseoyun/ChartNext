@@ -53,25 +53,49 @@ watch(() => props.ticker, async (newTicker) => {
 
 async function fetchChartData(option) {
   try {
-    const response = await apiClient.get('/companies/stock/', {
-      params: {
-        stock_code: props.ticker,
-        period: option
-      }
-    });
-    
-    // 데이터 포맷팅
-    chartData.value = {
-      labels: response.data.map(item => item.Date),
-      datasets: [
-        {
-          label: '종가',
-          data: response.data.map(item => item.Close),
-          borderColor: '#36A2EB',
-          tension: 0.1
+    // 1d, 5d는 intraday API 사용
+    if (option === '1d' || option === '5d') {
+      const response = await apiClient.get('/companies/stock/intraday/', {
+        params: {
+          stock_code: props.ticker,
+          period: option
         }
-      ]
-    };
+      });
+      
+      // intraday 데이터 포맷팅
+      chartData.value = {
+        labels: response.data.data.map(item => item.datetime),
+        datasets: [
+          {
+            label: '종가',
+            data: response.data.data.map(item => item.close),
+            borderColor: '#36A2EB',
+            tension: 0.1
+          }
+        ]
+      };
+    } else {
+      // 기존 일봉 데이터 API 사용
+      const response = await apiClient.get('/companies/stock/', {
+        params: {
+          stock_code: props.ticker,
+          period: option
+        }
+      });
+      
+      // 일봉 데이터 포맷팅
+      chartData.value = {
+        labels: response.data.map(item => item.Date),
+        datasets: [
+          {
+            label: '종가',
+            data: response.data.map(item => item.Close),
+            borderColor: '#36A2EB',
+            tension: 0.1
+          }
+        ]
+      };
+    }
   } catch (error) {
     console.error('데이터 불러오기 실패:', error);
   }

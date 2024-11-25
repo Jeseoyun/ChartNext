@@ -16,6 +16,70 @@ from .ml_models import train_models
 import FinanceDataReader as fdr
 from django.http import JsonResponse
 import yfinance as yf
+from pykrx import stock
+import pandas as pd
+import requests
+import jwt
+import hashlib
+import time
+import os
+
+# 전역 변수로 토큰 정보 저장
+_access_token = None
+_token_expires_at = None
+_last_token_request = None
+_token_refresh_interval = 6 * 3600  # 6시간 (초 단위)
+
+def get_access_token():
+    """한국투자증권 API 접근 토큰 발급 (캐싱 및 재사용)"""
+    global _access_token, _token_expires_at, _last_token_request
+    
+    current_time = time.time()
+    
+    # 1. 유효한 토큰이 있는 경우
+    if _access_token and _token_expires_at and current_time < _token_expires_at:
+        return _access_token
+        
+    # 2. 마지막 요청으로부터 6시간이 지나지 않은 경우
+    if _last_token_request and (current_time - _last_token_request) < _token_refresh_interval:
+        if _access_token:  # 기존 토큰이 있다면 재사용
+            return _access_token
+    
+    # 3. 새로운 토큰 발급이 필요한 경우
+    try:
+        url = "https://openapi.koreainvestment.com:9443/oauth2/tokenP"
+        data = {
+            "grant_type": "client_credentials",
+            "appkey": os.getenv('KIS_APP_KEY'),
+            "appsecret": os.getenv('KIS_APP_SECRET'),
+        }
+        headers = {
+            "content-type": "application/json; charset=utf-8"
+        }
+        
+        response = requests.post(url, json=data, headers=headers, verify=False)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            _access_token = response_data.get("access_token")
+            expires_in = response_data.get("expires_in", 86400)  # 기본값 24시간
+            _token_expires_at = current_time + expires_in - 60  # 1분 여유
+            _last_token_request = current_time
+            return _access_token
+            
+        print(f"토큰 발급 실패 - Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        return None
+        
+    except Exception as e:
+        print(f"토큰 발급 중 오류 발생: {str(e)}")
+        return None
+
+def get_hash_key(data, key):
+    """한국투자증권 API 해시키 생성"""
+    path = data["tr_id"] + data["custtype"] + data["zipcd"] + timestamp
+    hash_key = hashlib.sha256(path.encode()).hexdigest()
+    return hash_key
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -225,5 +289,57 @@ def stock_current_price(request):
         
         return Response(result)
         
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def stock_intraday_data(request):
+    stock_code = request.GET.get('stock_code', '')
+    period = request.GET.get('period', '1d')
+    
+    if not stock_code:
+        return Response({'error': '종목 코드가 필요합니다.'}, status=400)
+    
+    if period not in ['1d', '5d']:
+        return Response({'error': '유효하지 않은 기간입니다. 1d 또는 5d만 가능합니다.'}, status=400)
+    
+    try:
+        is_korean = stock_code.isdigit()
+        
+        if is_korean:
+            # 한국 주식의 경우 코드에 .KS 추가
+            ticker = yf.Ticker(f"{stock_code}.KS")
+        else:
+            ticker = yf.Ticker(stock_code)
+            
+        if period == '1d':
+            df = ticker.history(period='1d', interval='1m')
+        else:  # 5d
+            df = ticker.history(period='5d', interval='5m')
+        
+        if df.empty:
+            return Response({'error': '데이터를 찾을 수 없습니다.'}, status=404)
+        
+        df = df.reset_index()
+        df = df.rename(columns={
+            'Datetime': 'datetime',
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        })
+        
+        df['datetime'] = pd.to_datetime(df['datetime']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        result = df[['datetime', 'open', 'high', 'low', 'close', 'volume']].to_dict('records')
+        
+        return Response({
+            'stock_code': stock_code,
+            'period': period,
+            'currency': 'KRW' if is_korean else 'USD',
+            'data': result
+        })
+            
     except Exception as e:
         return Response({'error': str(e)}, status=500)
