@@ -1,24 +1,97 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { Line, Chart } from 'vue-chartjs';
+import { 
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import apiClient from '@/api';
+
+// Chart.js 등록
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const selectedOption = ref('6mo');
 const options = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', 'max'];
+const chartData = ref(null);
+const chartOptions = ref({
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    y: {
+      beginAtZero: false
+    }
+  }
+});
 
-function fetchChartData(option) {
-  // API 호출 로직을 여기에 추가하세요.
-  console.log(`Fetching data for ${option}`);
-  // 예시: fetch(`api/stock-data?range=${option}`)
+// props 추가
+const props = defineProps({
+  ticker: {
+    type: String,
+    required: true
+  }
+});
+
+watch(() => props.ticker, async (newTicker) => {
+  if (newTicker) {
+    await fetchChartData(selectedOption.value);
+  }
+}, { immediate: true });
+
+async function fetchChartData(option) {
+  try {
+    const response = await apiClient.get('/companies/stock/', {
+      params: {
+        stock_code: props.ticker,
+        period: option
+      }
+    });
+    
+    // 데이터 포맷팅
+    chartData.value = {
+      labels: response.data.map(item => item.Date),
+      datasets: [
+        {
+          label: '종가',
+          data: response.data.map(item => item.Close),
+          borderColor: '#36A2EB',
+          tension: 0.1
+        }
+      ]
+    };
+  } catch (error) {
+    console.error('데이터 불러오기 실패:', error);
+  }
 }
 
-function selectOption(option) {
+async function selectOption(option) {
   selectedOption.value = option;
-  fetchChartData(option);
+  await fetchChartData(option);
 }
 </script>
 
 <template>
   <div>
-    <a>chart가 보여질 부분</a>
+    <div class="chart" style="height: 400px;">
+      <Line 
+        v-if="chartData"
+        :data="chartData"
+        :options="chartOptions"
+      />
+    </div>
     <div>
       <button
         v-for="option in options"
