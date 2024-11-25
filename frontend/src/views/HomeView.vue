@@ -5,35 +5,29 @@
         <source src="@/assets/main_background.mp4" type="video/mp4" />
       </video>
       <div class="content">
-        <img src="@/assets/logo.png" alt="Logo" class="logo" @click="goHome" />
+        <LogoComponent />
+        <NavBarComponent />
         <div class="text-content">
           <h1>Chart Next</h1>
           <p>RAG 기반 뉴스 추천 및 주가 예측 시스템</p>
           <button class="start-button" @click="goLogin">시작하기</button>
         </div>
-        <nav class="navbar">
-          <button @click="goStocks">종목</button>
-          <button @click="goNews">뉴스</button>
-          <button @click="goLogin">로그인</button>
-        </nav>
       </div>
     </div>
   </v-container>
 </template>
 
 <script>
+import LogoComponent from '@/components/LogoComponent.vue';
+import NavBarComponent from '@/components/NavBarComponent.vue';
+
 export default {
   name: 'HomeView',
+  components: {
+    LogoComponent,
+    NavBarComponent,
+  },
   methods: {
-    goHome() {
-      this.$router.push({ name: 'Home' });
-    },
-    goStocks() {
-      this.$router.push({ name: 'Interests' });
-    },
-    goNews() {
-      this.$router.push({ name: 'News' });
-    },
     goLogin() {
       this.$router.push({ name: 'Login' });
     },
@@ -88,13 +82,6 @@ export default {
   text-align: left;
   padding-left: 300px;
   font-family: 'GmarketSansBold', sans-serif;
-}
-
-.logo {
-  position: absolute;
-  top: 0px;
-  left: 20px;
-  cursor: pointer;
 }
 
 .text-content h1 {
@@ -181,34 +168,6 @@ export default {
   100% {
     transform: rotate(45deg) translateX(200%);
   }
-}
-
-.navbar {
-  position: absolute;
-  top: 42px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 60px;
-  font-family: 'AppleSDGothicNeoB', sans-serif;
-}
-
-.navbar button {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 24px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-clip: text;
-  -webkit-background-clip: text;
-}
-
-.navbar button:hover {
-  background: linear-gradient(120deg, #9350ff, #765eff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .v-container, .v-main, .v-application {
