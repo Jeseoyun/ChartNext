@@ -177,8 +177,8 @@ export default {
       loading.value = true;
       try {
         const currentCategory = getCurrentCategory();
-        // const response = await apiClient.get('/api/news/', {
         console.log('Fetching news with category:', selectedCategory.value);
+        // const response = await apiClient.get('/api/news/', {
         const response = await apiClient.get('/news/', {
           params: {
             category: currentCategory === 'all' ? '' : currentCategory,
