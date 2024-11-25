@@ -38,6 +38,17 @@ const router = createRouter({
       component: NewsListView
     },
     {
+      path: '/news/category/:category',
+      name: 'NewsByCategory',
+      component: NewsListView
+    },
+    {
+      path: '/news/:id(\\d+)',
+      name: 'NewsDetail',
+      component: NewsDetailView,
+      props: true
+    },
+    {
       path: '/interests',
       name: 'Interests',
       component: InterestListView
@@ -52,12 +63,6 @@ const router = createRouter({
       path: '/user-init',
       name: 'UserInit',
       component: UserInitView
-    },
-    {
-      path: '/news/:id',
-      name: 'NewsDetail',
-      component: NewsDetailView,
-      props: true
     }
   ]
 })

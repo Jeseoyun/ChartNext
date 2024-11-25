@@ -2,23 +2,42 @@
   <nav class="navbar">
     <button @click="goStocks">종목</button>
     <button @click="goNews">뉴스</button>
-    <button @click="goLogin">로그인</button>
+    <button v-if="!isLoggedIn" @click="goLogin">로그인</button>
+    <button v-else @click="logout">로그아웃</button>
   </nav>
 </template>
 
 <script>
+import { useUserStore } from '@/stores/user';
+import { computed } from 'vue';
+
 export default {
   name: 'NavBarComponent',
+  setup() {
+    const userStore = useUserStore();
+    const isLoggedIn = computed(() => userStore.isLoggedIn);
+
+    return {
+      isLoggedIn
+    };
+  },
   methods: {
     goStocks() {
       this.$router.push({ name: 'Interests' });
     },
     goNews() {
-      this.$router.push({ name: 'News' });
+      this.$router.push({ 
+        name: 'News',
+        query: { category: 'all' }
+      });
     },
     goLogin() {
       this.$router.push({ name: 'Login' });
     },
+    logout() {
+      // 로그아웃 로직 구현
+      this.$router.push({ name: 'Home' });
+    }
   },
 };
 </script>
