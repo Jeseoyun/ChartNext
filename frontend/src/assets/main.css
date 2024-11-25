@@ -47,3 +47,13 @@ html, body {
   padding: 0;
   overflow-x: hidden;
 }
+
+@font-face {
+  font-family: 'AppleSDGothicNeoL';
+  src: url('@/assets/fonts/AppleSDGothicNeoL.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'AppleSDGothicNeoB';
+  src: url('@/assets/fonts/AppleSDGothicNeoB.ttf') format('truetype');
+}
