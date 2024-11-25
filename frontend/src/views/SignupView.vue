@@ -121,7 +121,7 @@ export default {
     },
     async handleSignup() {
       if (this.password1 !== this.password2) {
-        alert('비밀번호가 일치지 않습니다.');
+        alert('비밀번호가 일치하지 않습니다.');
         return;
       }
       if (this.passwordErrors.length > 0) {
@@ -136,7 +136,7 @@ export default {
           email: `${this.username}@example.com`
         };
         
-        const signupResponse = await apiClient.post('/auth/registration/', signupData);
+        const signupResponse = await apiClient.post('/api/auth/registration/', signupData);
         console.log('회원가입 응답:', signupResponse.data);
         
         await this.userStore.login(this.username, this.password1);
@@ -152,7 +152,22 @@ export default {
           message: error.message,
           url: error.config?.url
         });
-        alert(`회원가입에 실패하였습니다: ${error.response?.data?.detail || '알 수 없는 오류'}`);
+
+        let errorMessage = '회원가입에 실패하였습니다: ';
+        if (error.response?.data?.username) {
+          errorMessage += '이미 사용중인 아이디입니다.';
+        } else if (error.response?.data?.email) {
+          errorMessage += '이미 사용중인 이메일입니다.';
+        } else if (error.response?.data?.password1) {
+          errorMessage += error.response.data.password1.join(', ');
+        } else if (error.response?.data?.detail) {
+          errorMessage += error.response.data.detail;
+        } else if (error.response?.status === 404) {
+          errorMessage += '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.';
+        } else {
+          errorMessage += '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        }
+        alert(errorMessage);
       }
     },
     socialLogin(provider) {
@@ -213,7 +228,7 @@ export default {
   color: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0px 0px 200px #6439ff60;
+  box-shadow: 0px 0px 100px #6439ff60;
   backdrop-filter: blur(10px);
 }
 .logo {

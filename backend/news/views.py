@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 def get_news_by_category(request):
-    category = request.GET.get('category', None)
-    search_query = request.GET.get('search', None)
+    category = request.GET.get('category', '')
+    search_query = request.GET.get('search', '')
     limit = int(request.GET.get('limit', 8))
     offset = int(request.GET.get('offset', 0))
     
@@ -25,9 +25,23 @@ def get_news_by_category(request):
         Prefetch('images', queryset=NewsImage.objects.order_by('refid'))
     )
     
+    # 카테고리 매핑
+    category_mapping = {
+        'business': '기업',
+        'politics': '정치',
+        'economy': '경제',
+        'stock': '증권',
+        'society': '사회',
+        'international': '국제',
+        'culture': '문화',
+        'it-science': 'IT·과학'
+    }
+    
     if category and category != 'all':
-        queryset = queryset.filter(category=category)
-        
+        mapped_category = category_mapping.get(category)
+        if mapped_category:
+            queryset = queryset.filter(category=mapped_category)
+    
     if search_query:
         queryset = queryset.filter(
             Q(title__icontains=search_query) |

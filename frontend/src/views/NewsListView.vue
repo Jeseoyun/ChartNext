@@ -19,6 +19,8 @@
             :value="category.value"
             class="category-chip"
             variant="text"
+            @click="handleCategoryChange(category.value)"
+            :class="{ 'category-selected': selectedCategory === category.value }"
           >
             {{ category.text }}
           </v-chip>
@@ -112,6 +114,7 @@ import LogoComponent from '@/components/LogoComponent.vue';
 import NavBarComponent from '@/components/NavBarComponent.vue';
 import { ref, onMounted, watch } from 'vue';
 import apiClient from '@/api';
+import { useRouter, useRoute } from 'vue-router';
 
 export default {
   name: 'NewsListView',
@@ -120,142 +123,89 @@ export default {
     NavBarComponent,
   },
   setup() {
-    const articles = ref([])
-    const loading = ref(false)
-    const dialog = ref(false)
-    const selectedArticle = ref(null)
-    const selectedCategory = ref('all')
-    const drawer = ref(false)
-    const menuItems = ref([
-      { 
-        title: '오피니언',
-        icon: 'mdi-newspaper',
-        items: ['Pulse', 'MK China', 'MK밸리리더뉴스']
-      },
-      { 
-        title: '프리미엄',
-        icon: 'mdi-star',
-        items: ['MK워클리연재', '매경e신문', '레이더M']
-      },
-      { 
-        title: '재테크',
-        icon: 'mdi-cash',
-        items: ['마', '부동산', '시사 경제 용어']
-      },
-      { 
-        title: '라이프',
-        icon: 'mdi-heart',
-        items: ['골프', 'Book', '여행']
-      },
-      { 
-        title: '비즈니스',
-        icon: 'mdi-briefcase',
-        items: ['The Biz Times', '넷케이블레콤', 'KDX국데이터거래소']
-      }
-    ])
+    const articles = ref([]);
+    const loading = ref(false);
+    const selectedCategory = ref('all');
+    const searchQuery = ref('');
+    const page = ref(1);
+    const limit = ref(8);
+    const router = useRouter();
+    const route = useRoute();
 
     const categories = ref([
       { text: '전체', value: 'all' },
-      { text: '기업', value: '기업' },
-      { text: '정치', value: '정치' },
-      { text: '경제', value: '경제' },
-      { text: '증권', value: '증권' },
-      { text: '사회', value: '사회' },
-      { text: '국제', value: '국제' },
-      { text: '문화', value: '문화' },
-      { text: 'IT·과학', value: 'IT·과학' }
-    ])
+      { text: '기업', value: 'business' },
+      { text: '정치', value: 'politics' },
+      { text: '경제', value: 'economy' },
+      { text: '증권', value: 'stock' },
+      { text: '사회', value: 'society' },
+      { text: '국제', value: 'international' },
+      { text: '문화', value: 'culture' },
+      { text: 'IT·과학', value: 'it-science' }
+    ]);
 
-    const page = ref(1)
-    const limit = ref(8)
-    const searchQuery = ref('')
+    const categoryToPath = {
+      'all': '',
+      'business': 'business',
+      'politics': 'politics',
+      'economy': 'economy',
+      'stock': 'stock',
+      'society': 'society',
+      'international': 'international',
+      'culture': 'culture',
+      'it-science': 'it-science'
+    };
+
+    const getCurrentCategory = () => {
+      const pathCategory = route.params.category;
+      if (!pathCategory || pathCategory === 'all') {
+        return 'all';
+      }
+      return pathCategory;
+    };
+
+    const handleCategoryChange = (categoryValue) => {
+      if (categoryValue === 'all') {
+        router.push('/news');
+      } else {
+        router.push(`/news/category/${categoryValue}`);
+      }
+      selectedCategory.value = categoryValue;
+    };
 
     const fetchNews = async () => {
-      loading.value = true
+      loading.value = true;
       try {
+        const currentCategory = getCurrentCategory();
+        // const response = await apiClient.get('/api/news/', {
         console.log('Fetching news with category:', selectedCategory.value);
         const response = await apiClient.get('/news/', {
           params: {
-            category: selectedCategory.value === 'all' ? '' : selectedCategory.value,
+            category: currentCategory === 'all' ? '' : currentCategory,
             limit: limit.value,
             offset: (page.value - 1) * limit.value,
             search: searchQuery.value
           }
-        })
+        });
+
         if (page.value === 1) {
-          articles.value = response.data
+          articles.value = response.data;
         } else {
-          articles.value = [...articles.value, ...response.data]
+          articles.value = [...articles.value, ...response.data];
         }
       } catch (error) {
-        console.error('뉴스 데이터 로딩 실패:', error.response?.data || error)
+        console.error('뉴스 로딩 실패:', error);
       } finally {
-        loading.value = false
+        loading.value = false;
       }
-    }
+    };
 
     const loadMore = async () => {
-      page.value += 1
-      await fetchNews()
-    }
+      page.value += 1;
+      await fetchNews();
+    };
 
-    const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-
-    const formatAuthors = (authors) => {
-      if (!authors) return ''
-      const authorList = JSON.parse(authors)
-      return authorList.map(author => author.name).join(', ')
-    }
-
-    const showArticleDetail = (article) => {
-      selectedArticle.value = article
-      dialog.value = true
-    }
-
-    watch(selectedCategory, () => {
-      page.value = 1
-      searchQuery.value = ''
-      fetchNews()
-    })
-
-    onMounted(() => {
-      fetchNews()
-    })
-
-    const searchNews = async () => {
-      if (searchQuery.value.trim()) {
-        page.value = 1
-        await fetchNews()
-      }
-    }
-
-    return {
-      articles,
-      loading,
-      categories,
-      selectedCategory,
-      formatDate,
-      dialog,
-      selectedArticle,
-      formatAuthors,
-      showArticleDetail,
-      drawer,
-      menuItems,
-      loadMore,
-      searchQuery,
-      searchNews,
-    }
-  },
-  methods: {
-    getTimeAgo(dateString) {
+    const getTimeAgo = (dateString) => {
       const now = new Date();
       const past = new Date(dateString);
       const diffInSeconds = Math.floor((now - past) / 1000);
@@ -272,25 +222,58 @@ export default {
         const days = Math.floor(diffInSeconds / 86400);
         return `${days}일 전`;
       }
-    },
-    goToNews(url) {
-      window.open(url, '_blank');
-    },
-    getContentPreview(article) {
+    };
+
+    const getContentPreview = (article) => {
       if (article.contents && article.contents.length > 0) {
         const content = article.contents[0].text;
         return content.length > 100 ? content.slice(0, 100) + '...' : content;
       }
       return '';
-    },
-    goToNewsDetail(article) {
-      this.$router.push({
+    };
+
+    const goToNewsDetail = (article) => {
+      router.push({
         name: 'NewsDetail',
         params: { id: article.id }
       });
-    }
+    };
+
+    watch(
+      () => route.params.category,
+      () => {
+        selectedCategory.value = getCurrentCategory();
+        page.value = 1;
+        fetchNews();
+      },
+      { immediate: true }
+    );
+
+    onMounted(() => {
+      fetchNews();
+    });
+
+    const searchNews = async () => {
+      if (searchQuery.value.trim()) {
+        await fetchNews();
+      }
+    };
+
+    return {
+      articles,
+      loading,
+      categories,
+      selectedCategory,
+      searchQuery,
+      handleCategoryChange,
+      loadMore,
+      getTimeAgo,
+      getContentPreview,
+      goToNewsDetail,
+      searchNews,
+    };
   }
-}
+};
 </script>
 
 <style scoped>

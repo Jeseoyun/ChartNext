@@ -119,6 +119,7 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_n
 echo "PostgreSQL JDBC 드라이버 설치 중..."
 mkdir -p /usr/local/spark/jars
 curl -L -o /usr/local/spark/jars/postgresql-42.7.3.jar https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
+sudo chmod 644 /usr/local/spark/jars/postgresql-42.7.3.jar
 
 # 권한 설정
 sudo chown -R $USER:$USER /usr/local/spark/jars

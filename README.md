@@ -97,12 +97,12 @@ git push
 <br />
 <br />
 
-## 1. 실행 방법
+## 실행 방법
 <details>
 <summary>접기/펼치기</summary>
 <div markdown="1">
 
-### 설치 스크립트 실행
+### 1. 설치 스크립트 실행
 ```bash
 cd scripts
 ./install.sh
@@ -222,7 +222,7 @@ hdfs dfs -cat /news_data/raw/articles.json
 
 ### (기타) 크롤링 한 파일을 로컬로 복사하기
 ```bash
-hdfs dfs -get /news_data/raw/articles.json ./local_articles.json
+hdfs dfs -get /news_data/raw/articles.json ./articles.json
 ```
 
 ### (기타) Spark로 HDFS에 있는 크롤링 파일을 PostgreSQL에 로드하기
@@ -230,12 +230,16 @@ hdfs dfs -get /news_data/raw/articles.json ./local_articles.json
 ```bash
 spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar news_crawling/spark/load_to_postgres.py
 ```
-
   > 또는 프로젝트 루트 디렉토리에서
 ```bash
 spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar backend/news_crawling/spark/load_to_postgres.py
 ```
 
+
+### (기타) 로컬에 있는 크롤링 파일을 HDFS에 복사하기
+```bash
+hdfs dfs -put articles.json /news_data/raw/
+```
 
 
 

@@ -28,6 +28,8 @@
               :value="category.value"
               class="category-chip"
               variant="text"
+              @click="handleCategoryClick(category)"
+              :class="{ 'category-selected': article?.category === category.value }"
             >
               {{ category.text }}
             </v-chip>
@@ -71,7 +73,7 @@
       <span class="ml-3">기사를 불러올 수 없습니다.</span>
     </div>
     
-    <!-- 기사 용 -->
+    <!-- 기사  -->
     <div v-else>
       <!-- 왼쪽 사이드 버튼 -->
       <div class="side-buttons">
@@ -115,32 +117,55 @@
 
           <!-- 댓글 섹션 -->
           <div class="comments-section">
-            <h2>댓글</h2>
-            <!-- 댓글 작성 폼 -->
-            <div class="comment-form">
-              <v-textarea
-                v-model="newComment"
-                label="댓글을 작성하세요"
-                rows="3"
-                no-resize
-                outlined
-              ></v-textarea>
+            <div class="like-section">
               <v-btn
-                color="primary"
-                @click="submitComment"
-                :loading="submittingComment"
+                icon
+                class="like-button"
+                :class="{ 'liked': isLiked }"
+                @click="handleLike"
               >
-                댓글 작성
+                <v-icon>{{ isLiked ? 'mdi-emoticon' : 'mdi-emoticon-outline' }}</v-icon>
               </v-btn>
+              <span class="like-count">좋아요 {{ likeCount }}</span>
             </div>
-            <!-- 댓글 목록 -->
-            <div class="comments-list">
-              <div v-for="comment in comments" :key="comment.id" class="comment">
-                <div class="comment-header">
-                  <span class="comment-author">{{ comment.author }}</span>
-                  <span class="comment-time">{{ formatDate(comment.time) }}</span>
-                </div>
-                <p class="comment-text">{{ comment.text }}</p>
+
+            <div class="comments-header">
+              <h2>댓글 {{ comments.length }}</h2>
+            </div>
+            
+            <!-- 댓글 작성 폼 -->
+            <div 
+              class="comment-form"
+              :class="{ 'not-logged-in': !isLoggedIn }"
+              @click="handleCommentBoxClick"
+            >
+              <div class="comment-input">
+                <v-text-field
+                  v-model="newComment"
+                  :placeholder="isLoggedIn ? '댓글을 입력해주세요' : '로그인 후 댓글 작성이 가능합니다'"
+                  variant="plain"
+                  hide-details
+                  class="comment-field"
+                  :readonly="!isLoggedIn"
+                  @click.stop="!isLoggedIn && router.push('/login')"
+                ></v-text-field>
+                <div v-if="isLoggedIn" class="comment-counter">{{ newComment.length }} / 400</div>
+              </div>
+              <div v-if="isLoggedIn" class="form-actions">
+                <v-btn
+                  variant="text"
+                  class="cancel-btn"
+                  @click="newComment = ''"
+                >
+                  취소
+                </v-btn>
+                <v-btn
+                  class="submit-btn"
+                  @click="handleSubmitComment"
+                  :loading="submittingComment"
+                >
+                  등록
+                </v-btn>
               </div>
             </div>
           </div>
@@ -196,6 +221,9 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import LogoComponent from '@/components/LogoComponent.vue';
 import NavBarComponent from '@/components/NavBarComponent.vue';
 import apiClient from '@/api';
+import { useRouter } from 'vue-router';  // router 추가
+
+const router = useRouter();  // router 인스턴스 생성
 
 const props = defineProps({
   id: {
@@ -216,6 +244,9 @@ const isScrolled = ref(false);
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 const isChatbotOpen = ref(false);
+const isLiked = ref(false);
+const likeCount = ref(0);
+const isLoggedIn = ref(false); // 로그인 상태 체크용
 
 // 유틸리티 함수들
 const formatDate = (dateString) => {
@@ -327,17 +358,29 @@ const handleScroll = () => {
   isScrolled.value = scrolled > 100;
 };
 
-// 카테고리 목록 추가
+// 카테고리 매핑 객체 추가
+const categoryToPath = {
+  '전체': '',
+  '경제': 'economy',
+  '기업': 'business',
+  '정치': 'politics',
+  '사회': 'society',
+  '국제': 'international',
+  '문화': 'culture',
+  'IT·과학': 'it-science'
+};
+
+// 카테고리 데이터 수정
 const categories = [
   { text: '전체', value: 'all' },
-  { text: '기업', value: '기업' },
-  { text: '정치', value: '정치' },
-  { text: '경제', value: '경제' },
-  { text: '증권', value: '증권' },
-  { text: '사회', value: '사회' },
-  { text: '국제', value: '국제' },
-  { text: '문화', value: '문화' },
-  { text: 'IT·과학', value: 'IT·과학' }
+  { text: '기업', value: 'business' },
+  { text: '정치', value: 'politics' },
+  { text: '경제', value: 'economy' },
+  { text: '증권', value: 'stock' },
+  { text: '사회', value: 'society' },
+  { text: '국제', value: 'international' },
+  { text: '문화', value: 'culture' },
+  { text: 'IT·과학', value: 'it-science' }
 ];
 
 const searchNews = () => {
@@ -351,6 +394,48 @@ const searchNews = () => {
 
 const toggleChatbot = () => {
   isChatbotOpen.value = !isChatbotOpen.value;
+};
+
+// 좋아요 처리 함수
+const handleLike = () => {
+  if (!isLoggedIn.value) {
+    router.push('/login');
+    return;
+  }
+  isLiked.value = !isLiked.value;
+  likeCount.value += isLiked.value ? 1 : -1;
+};
+
+// 댓글 제출 처리 함수
+const handleSubmitComment = () => {
+  if (!isLoggedIn.value) {
+    router.push('/login');
+    return;
+  }
+  submitComment();
+};
+
+// 카테고리 클릭 핸들러 수정
+const handleCategoryClick = (category) => {
+  if (category.value === 'all') {
+    router.push('/news');
+  } else {
+    router.push(`/news/category/${category.value}`);
+  }
+};
+
+// 댓글창 클릭 핸들러 추가
+const handleCommentBoxClick = () => {
+  if (!isLoggedIn.value) {
+    router.push('/login');
+  }
+};
+
+const goToNewsDetail = (article) => {
+  router.push({
+    name: 'NewsDetail',
+    params: { id: article.id }
+  });
 };
 
 onMounted(() => {
@@ -587,37 +672,116 @@ onUnmounted(() => {
 .comments-section {
   margin-top: 60px;
   padding-top: 40px;
-  border-top: 1px solid #eee;
+  margin-bottom: 80px;
 }
 
-.comment-form {
-  margin-bottom: 40px;
-}
-
-.comment {
-  padding: 20px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.comment-header {
+.like-section {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.comment-author {
-  font-weight: 600;
-  color: #333;
+.like-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff !important;
 }
 
-.comment-time {
-  color: #666;
+.like-button:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.like-button.liked {
+  background: #4a9eff !important;
+  border-color: #4a9eff;
+}
+
+.like-count {
+  color: #fff;
+  font-family: 'AppleSDGothicNeoL', sans-serif;
   font-size: 14px;
 }
 
-.comment-text {
-  color: #333;
-  line-height: 1.6;
+.comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.comments-header h2 {
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  font-size: 18px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-form {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.comment-form.not-logged-in {
+  cursor: pointer;
+}
+
+.comment-form.not-logged-in .comment-field {
+  cursor: pointer;
+}
+
+.comment-input {
+  position: relative;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comment-field {
+  font-family: 'AppleSDGothicNeoL', sans-serif;
+}
+
+.comment-field :deep(.v-field__input) {
+  color: #fff !important;
+  font-size: 14px;
+  padding: 0;
+}
+
+.comment-field :deep(.v-field__input::placeholder) {
+  color: rgba(255, 255, 255, 0.5) !important;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+  gap: 8px;
+}
+
+.cancel-btn {
+  color: #888 !important;
+  font-family: 'AppleSDGothicNeoL', sans-serif;
+  font-size: 14px;
+}
+
+.submit-btn {
+  background: #000 !important;
+  color: #fff !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  height: 32px;
+  min-width: 60px;
+}
+
+.submit-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .loading {
