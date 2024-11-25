@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import apiClient from '@/api';
@@ -12,6 +12,7 @@ const userStore = useUserStore();
 
 const selectedStock = ref(null);
 const userStocks = ref([]);
+const selectedStockPrice = ref(null);
 
 // 검색 결과 클릭 핸들러
 const handleSearchResultClick = (stock) => {
@@ -56,6 +57,25 @@ const loadUserStocks = async () => {
   }
 };
 
+// 주식 현재가 데이터 로드
+const loadStockPrice = async (stock) => {
+  if (!stock) return;
+  
+  try {
+    const response = await apiClient.get('/companies/stock/current/', {
+      params: { stock_code: stock.code }
+    });
+    selectedStockPrice.value = response.data;
+  } catch (error) {
+    console.error('주식 현재가 로드 실패:', error);
+  }
+};
+
+// selectedStock이 변경될 때마다 현재가 데이터 로드
+watch(selectedStock, (newStock) => {
+  loadStockPrice(newStock);
+});
+
 onMounted(() => {
   loadUserStocks();
 });
@@ -83,7 +103,22 @@ onMounted(() => {
             <v-col cols="12" md="9">
               <v-card class="chart-card">
                 <v-card-title v-if="selectedStock" class="d-flex align-center justify-space-between">
-                  <span>{{ selectedStock.name }} ({{ selectedStock.code }})</span>
+                  <div>
+                    <span>{{ selectedStock.name }} ({{ selectedStock.code }})</span>
+                    <template v-if="selectedStockPrice">
+                      <span class="ml-4 text-h6">
+                        {{ selectedStockPrice.current_price.toLocaleString() }}
+                      </span>
+                      <span 
+                        :class="[
+                          'ml-2',
+                          selectedStockPrice.change_ratio > 0 ? 'text-red' : 'text-blue',
+                        ]"
+                      >
+                        {{ selectedStockPrice.change_ratio > 0 ? '+' : '' }}{{ selectedStockPrice.change_ratio.toFixed(2) }}%
+                      </span>
+                    </template>
+                  </div>
                   <v-btn
                     icon
                     variant="text"
@@ -250,5 +285,25 @@ onMounted(() => {
   .search-results {
     width: calc(100% - 40px);
   }
+}
+
+.text-red {
+  color: #ff5252 !important;
+}
+
+.text-blue {
+  color: #2196f3 !important;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+
+.ml-4 {
+  margin-left: 16px;
+}
+
+.text-h6 {
+  font-size: 1.25rem;
 }
 </style>

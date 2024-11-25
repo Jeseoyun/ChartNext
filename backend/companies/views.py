@@ -173,3 +173,57 @@ def chatbot(request):
     
     answer = response.choices[0].text.strip()
     return Response({'answer': answer})
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def stock_current_price(request):
+    stock_code = request.GET.get('stock_code', '')
+    
+    if not stock_code:
+        return Response({'error': '종목 코드가 필요합니다.'}, status=400)
+        
+    try:
+        is_korean = stock_code.isdigit()
+        
+        if is_korean:
+            # 한국 주식 데이터 가져오기
+            df = fdr.DataReader(stock_code)
+            if df.empty:
+                return Response({'error': '해당 종목의 데이터를 찾을 수 없습니다.'}, status=404)
+            
+            today_data = df.iloc[-1]
+            yesterday_data = df.iloc[-2]
+        else:
+            # 해외 주식 데이터 가져오기
+            ticker = yf.Ticker(stock_code)
+            
+            # 오늘 데이터
+            today_df = ticker.history(period='1d')
+            if today_df.empty:
+                return Response({'error': '해당 종목의 데이터를 찾을 수 없습니다.'}, status=404)
+            
+            # 어제 데이터 (5일 데이터를 가져와서 마지막에서 두 번째 데이터 사용)
+            past_df = ticker.history(period='5d')
+            
+            today_data = today_df.iloc[-1]
+            yesterday_data = past_df.iloc[-2]
+        
+        price_change = today_data['Close'] - yesterday_data['Close']
+        change_ratio = (price_change / yesterday_data['Close']) * 100
+        
+        result = {
+            'current_price': float(today_data['Close']),
+            'price_change': float(price_change),
+            'change_ratio': float(change_ratio),
+            'volume': int(today_data['Volume']),
+            'high': float(today_data['High']),
+            'low': float(today_data['Low']),
+            'open': float(today_data['Open']),
+            'date': today_df.index[-1].strftime('%Y-%m-%d') if not is_korean else df.index[-1].strftime('%Y-%m-%d'),
+            'currency': 'KRW' if is_korean else 'USD'
+        }
+        
+        return Response(result)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
