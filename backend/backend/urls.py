@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/companies/', include('companies.urls')),
     path('accounts/', include('allauth.urls')),
     path('api/stocks/', include('stocks.urls')),
+    path('api/', include('news.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
