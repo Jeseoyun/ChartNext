@@ -2,9 +2,7 @@
   <v-container fluid class="d-flex align-center justify-center login-signup-background">
     <v-row align="center" justify="center" class="fill-height">
       <v-col cols="12" sm="6" md="4" lg="3">
-        <div class="logo">
-          <img src="@/assets/logo.png" alt="Logo" @click="goToHome" />
-        </div>
+        <LogoComponent />
         <div class="signup-card">
           <h2 class="text-center">회원가입</h2>
           <p class="text-center welcome-message">Chart Next에 오신 것을 환영합니다</p>
@@ -61,11 +59,15 @@
 </template>
 
 <script>
+import LogoComponent from '@/components/LogoComponent.vue';
 import apiClient from '@/api';
 import { useUserStore } from '@/stores/user';
 
 export default {
   name: 'SignupView',
+  components: {
+    LogoComponent,
+  },
   setup() {
     const userStore = useUserStore();
     return { userStore };
@@ -192,9 +194,6 @@ export default {
       } else {
         alert(`${provider} 로그인 기능은 아직 구현되지 않았습니다.`);
       }
-    },
-    goToHome() {
-      this.$router.push({ name: 'Home' });
     },
   },
 };

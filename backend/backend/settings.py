@@ -95,6 +95,7 @@ INSTALLED_APPS = [
     'companies',
     'corsheaders',
     'stocks',
+    'news',
 ]
 
 SITE_ID = 1
@@ -224,11 +225,20 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
         },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
     },
     'loggers': {
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'DEBUG',  # 개발 환경에서는 DEBUG
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'news': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
             'propagate': True,
         },
     },
