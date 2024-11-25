@@ -285,7 +285,7 @@ const sortedContents = computed(() => {
 const fetchArticle = async () => {
   loading.value = true;
   try {
-    const response = await apiClient.get(`/api/news/${props.id}/`);
+    const response = await apiClient.get(`/news/${props.id}/`);
     article.value = response.data;
   } catch (error) {
     console.error('기사 로딩 실패:', error.response || error);

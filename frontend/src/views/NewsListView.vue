@@ -174,7 +174,7 @@ export default {
       loading.value = true
       try {
         console.log('Fetching news with category:', selectedCategory.value);
-        const response = await apiClient.get('/api/news/', {
+        const response = await apiClient.get('/news/', {
           params: {
             category: selectedCategory.value === 'all' ? '' : selectedCategory.value,
             limit: limit.value,
