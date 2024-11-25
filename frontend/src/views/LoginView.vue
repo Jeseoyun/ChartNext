@@ -2,9 +2,7 @@
   <v-container fluid class="d-flex align-center justify-center login-signup-background">
     <v-row align="center" justify="center" class="fill-height">
       <v-col cols="12" sm="6" md="4" lg="3">
-        <div class="logo">
-          <img src="@/assets/logo.png" alt="Logo" @click="goToHome" />
-        </div>
+        <LogoComponent />
         <div class="signup-card">
           <h2 class="text-center login-title">로그인</h2>
           <v-form @submit.prevent="handleLogin" ref="loginForm">
@@ -46,10 +44,14 @@
 </template>
 
 <script>
+import LogoComponent from '@/components/LogoComponent.vue';
 import { useUserStore } from '@/stores/user';
 
 export default {
   name: 'LoginView',
+  components: {
+    LogoComponent,
+  },
   data() {
     return {
       username: '',
@@ -94,9 +96,6 @@ export default {
       } else {
         alert(`${provider} 로그인 기능은 아직 구현되지 않았습니다.`);
       }
-    },
-    goToHome() {
-      this.$router.push({ name: 'Home' });
     },
   },
 };
