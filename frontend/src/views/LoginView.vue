@@ -115,7 +115,7 @@ export default {
   color: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0px 0px 200px #6439ff60;
+  box-shadow: 0px 0px 100px #6439ff60;
   backdrop-filter: blur(10px);
 }
 .logo {
