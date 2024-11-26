@@ -180,8 +180,27 @@ async function calculatePrediction() {
     const predictions = [lastPrice];  // 마지막 실제 가격을 예측 배열의 첫 번째 값으로 추가
     let currentPrice = lastPrice;
     
+    // 사인 함수를 사용하여 주기적인 변동성 추가
     for (let i = 0; i < predictionDays; i++) {
-      currentPrice += (predictionFactor * volatility);
+      // 기본 추세
+      const trend = predictionFactor * volatility;
+      
+      // 주기적 변동성 (사인 함수 사용)
+      const oscillation = Math.sin(i * Math.PI / 5) * volatility * 0.3;
+      
+      // 볼린저 밴드 위치에 따른 조정
+      const bbPosition = (currentPrice - indicators.bb_middle) / (indicators.bb_upper - indicators.bb_middle);
+      const meanReversion = (0.5 - bbPosition) * volatility * 0.2;
+      
+      // 최종 가격 변화량 계산
+      const priceChange = trend + oscillation + meanReversion;
+      
+      // 볼린저 밴드 범위 내로 제한
+      currentPrice += priceChange;
+      const maxPrice = indicators.bb_upper * 1.1;  // 상단 밴드의 110%
+      const minPrice = indicators.bb_lower * 0.9;  // 하단 밴드의 90%
+      currentPrice = Math.min(Math.max(currentPrice, minPrice), maxPrice);
+      
       predictions.push(currentPrice);
     }
     
@@ -198,7 +217,7 @@ async function calculatePrediction() {
         },
         {
           label: '예측',
-          data: [...Array(originalData.length - 1).fill(null), ...predictions],  // 마지막 실제 데이터 포인트부터 시작
+          data: [...Array(originalData.length - 1).fill(null), ...predictions],
           borderColor: '#FF9800',
           borderDash: [5, 5],
           tension: 0.4
