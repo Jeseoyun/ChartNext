@@ -9,15 +9,25 @@ import LogoComponent from '@/components/LogoComponent.vue';
 const router = useRouter();
 const userStocks = ref([]);
 const stockPrices = ref({});
+const trendingNews = ref([]);
+const hotTopics = ref([]);
+
+// 로딩 상태 변수 추가
+const isLoadingStocks = ref(true);
+const isLoadingNews = ref(true);
+const isLoadingTopics = ref(true);
 
 // 사용자의 관심 종목 로드
 const loadUserStocks = async () => {
+  isLoadingStocks.value = true;
   try {
     const response = await apiClient.get('/stocks/user-stocks/');
     userStocks.value = response.data;
     await loadStockPrices();
   } catch (error) {
     console.error('관심 종목 로드 실패:', error);
+  } finally {
+    isLoadingStocks.value = false;
   }
 };
 
@@ -69,8 +79,44 @@ const fallingStocks = computed(() =>
 
 const editInterests = () => router.push({ name: 'Interests' });
 
+// 뉴스 데이터 로드 함수
+const loadTrendingNews = async () => {
+  isLoadingNews.value = true;
+  try {
+    const response = await apiClient.get('/news/trending/');
+    trendingNews.value = response.data;
+  } catch (error) {
+    console.error('뉴스 데이터 로드 실패:', error);
+  } finally {
+    isLoadingNews.value = false;
+  }
+};
+
+// 기사 상세 페이지로 이동하는 함수
+const goToNewsDetail = (articleId) => {
+  router.push({
+    name: 'NewsDetail',
+    params: { id: articleId }
+  });
+};
+
+// 핫 토픽 로드 함수
+const loadHotTopics = async () => {
+  isLoadingTopics.value = true;
+  try {
+    const response = await apiClient.get('/news/hot-topics/');
+    hotTopics.value = response.data;
+  } catch (error) {
+    console.error('핫 토픽 로드 실패:', error);
+  } finally {
+    isLoadingTopics.value = false;
+  }
+};
+
 onMounted(() => {
   loadUserStocks();
+  loadTrendingNews();
+  loadHotTopics();
 });
 </script>
 
@@ -87,25 +133,37 @@ onMounted(() => {
         </div>
         
         <div class="dashboard">
-          <v-card class="dashboard-card">
-            <v-card-title>오늘의 이슈</v-card-title>
+          <v-card class="dashboard-card hot-topics-card">
+            <v-card-title>오늘의 핫 토픽</v-card-title>
             <v-card-text>
-              <v-list>
-                <v-list-item v-for="i in 3" :key="i">
-                  <v-list-item-title>주요 이슈 {{ i }}</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-card-text>
-          </v-card>
-
-          <v-card class="dashboard-card">
-            <v-card-title>내 관심기업 뉴스 동향</v-card-title>
-            <v-card-text>
-              <v-list>
-                <v-list-item v-for="i in 3" :key="i">
-                  <v-list-item-title>뉴스 동향 {{ i }}</v-list-item-title>
-                </v-list-item>
-              </v-list>
+              <div v-if="isLoadingTopics" class="loading-container">
+                <v-progress-circular
+                  indeterminate
+                  color="primary"
+                  size="32"
+                ></v-progress-circular>
+                <span class="loading-text">핫 토픽을 분석하는 중...</span>
+              </div>
+              <div v-else-if="hotTopics.length > 0" class="hot-topics">
+                <div v-for="(topic, index) in hotTopics" :key="index" class="topic-item">
+                  <div class="topic-header">
+                    <v-chip
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      class="topic-category"
+                    >
+                      {{ topic.category }}
+                    </v-chip>
+                  </div>
+                  <h3 class="topic-title">{{ topic.title }}</h3>
+                  <p class="topic-summary">{{ topic.summary }}</p>
+                </div>
+              </div>
+              <div v-else class="no-topics">
+                <v-icon size="40" color="grey">mdi-newspaper-variant-outline</v-icon>
+                <p>오늘의 핫 토픽이 없습니다</p>
+              </div>
             </v-card-text>
           </v-card>
 
@@ -124,7 +182,15 @@ onMounted(() => {
               </v-btn>
             </v-card-title>
             <v-card-text>
-              <div class="stock-section">
+              <div v-if="isLoadingStocks" class="loading-container">
+                <v-progress-circular
+                  indeterminate
+                  color="primary"
+                  size="32"
+                ></v-progress-circular>
+                <span class="loading-text">데이터를 불러오는 중...</span>
+              </div>
+              <div v-else class="stock-section">
                 <div class="stock-category" v-if="risingStocks.length > 0">
                   <h3 class="stock-category-title rising">
                     상승장
@@ -187,12 +253,63 @@ onMounted(() => {
           <v-card class="dashboard-card">
             <v-card-title>내 관심기업 관련 뉴스</v-card-title>
             <v-card-text>
-              <v-list>
-                <v-list-item v-for="i in 3" :key="i">
-                  <v-list-item-title>관련 뉴스 {{ i }}</v-list-item-title>
-                  <v-list-item-subtitle>뉴스 내용 요약</v-list-item-subtitle>
-                </v-list-item>
+              <div v-if="isLoadingNews" class="loading-container">
+                <v-progress-circular
+                  indeterminate
+                  color="primary"
+                  size="32"
+                ></v-progress-circular>
+                <span class="loading-text">뉴스를 불러오는 중...</span>
+              </div>
+              <v-list v-else-if="trendingNews.length > 0">
+                <div v-for="news in trendingNews" :key="news.company" class="trending-news-item">
+                  <div class="company-header">
+                    <h3 class="company-name">{{ news.company }}</h3>
+                    <v-chip
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      class="mention-count"
+                    >
+                      {{ news.mention_count }}건의 관련 기사
+                    </v-chip>
+                  </div>
+                  
+                  <div class="news-summary">
+                    <p class="headline">
+                      {{ 
+                        news.summary?.split('\n')?.[0]?.replace('1. 헤드라인: ', '') || 
+                        news.summary || 
+                        '제목 정보가 없습니다'
+                      }}
+                    </p>
+                    <p class="detail">
+                      {{ 
+                        news.summary?.split('\n\n')?.[1]?.replace('2. 상세 요약: ', '') || 
+                        (news.summary?.split('\n')?.[1] || '').replace('2. 상세 요약: ', '') || 
+                        '상세 내용이 없습니다'
+                      }}
+                    </p>
+                  </div>
+
+                  <div class="article-links">
+                    <v-btn
+                      v-for="articleId in news.article_ids"
+                      :key="articleId"
+                      variant="text"
+                      density="compact"
+                      color="primary"
+                      @click="goToNewsDetail(articleId)"
+                    >
+                      기사 {{ news.article_ids.indexOf(articleId) + 1 }} 보기
+                    </v-btn>
+                  </div>
+                </div>
               </v-list>
+              <div v-else class="no-news">
+                <v-icon size="40" color="grey">mdi-newspaper-variant-outline</v-icon>
+                <p>관련 뉴스가 없습니다</p>
+              </div>
             </v-card-text>
           </v-card>
         </div>
@@ -394,5 +511,138 @@ onMounted(() => {
   height: 80px;
   background-color: transparent;
   z-index: 1000;
+}
+
+.trending-news-item {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.trending-news-item:last-child {
+  border-bottom: none;
+}
+
+.company-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.company-name {
+  font-size: 1.1rem;
+  color: #9350ff;
+  margin: 0;
+}
+
+.mention-count {
+  font-size: 0.8rem;
+}
+
+.news-summary {
+  margin: 12px 0;
+}
+
+.news-summary .headline {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.news-summary .detail {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+.article-links {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.no-news {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.no-news p {
+  margin-top: 12px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  height: 300px;
+  gap: 16px;
+}
+
+.loading-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+}
+
+.hot-topics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.topic-item {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  height: 100%;
+}
+
+.topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.topic-category {
+  font-size: 0.8rem;
+}
+
+.topic-title {
+  font-size: 1.2rem;
+  color: white;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.topic-summary {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+.no-topics {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.no-topics p {
+  margin-top: 12px;
+}
+
+.hot-topics-card {
+  grid-column: span 2;
 }
 </style>
