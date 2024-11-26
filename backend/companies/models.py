@@ -1,5 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
@@ -33,3 +36,18 @@ class StockPrice(models.Model):
         indexes = [
             models.Index(fields=['stock_code', 'date']),
         ]
+
+class News(models.Model):
+    title = models.CharField(max_length=500)
+    content = models.TextField()
+    url = models.URLField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'News'
+        verbose_name_plural = 'News'
+
+    def __str__(self):
+        return self.title

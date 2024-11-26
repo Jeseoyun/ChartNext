@@ -41,6 +41,7 @@ const options = [
 const chartData = ref(null);
 const showPrediction = ref(false);
 const predictionData = ref(null);
+const sentimentData = ref(null);
 const chartOptions = ref({
   responsive: true,
   maintainAspectRatio: false,
@@ -169,6 +170,7 @@ async function calculatePrediction() {
       return;
     }
 
+    // 기술적 지표 데이터 가져오기
     const response = await apiClient.get('/companies/stock/indicators/', {
       params: {
         stock_code: props.ticker,
@@ -176,47 +178,61 @@ async function calculatePrediction() {
       }
     });
     
+    // 감성 분석 결과 가져오기
+    const sentimentResponse = await apiClient.get('/companies/news/sentiment/', {
+      params: {
+        stock_code: props.ticker
+      }
+    });
+    
+    const sentimentScore = sentimentResponse.data.sentiment_score; // -10 ~ 10 사이의 값
+    
     const indicators = response.data;
     const lastPrice = chartData.value.datasets[0].data[chartData.value.datasets[0].data.length - 1];
     
-    // 변동성 증가를 위한 수정
+    // 기존 예측 계산
     const rsiSignal = indicators.rsi > 70 ? -1.5 : indicators.rsi < 30 ? 1.5 : 0;
     const macdSignal = indicators.macd > indicators.macd_signal ? 1.5 : -1.5;
     const bbSignal = (lastPrice - indicators.bb_lower) / (indicators.bb_upper - indicators.bb_lower);
-    
-    // 변동성 가중치 증가
     const predictionFactor = (rsiSignal * 0.4 + macdSignal * 0.4 + bbSignal * 0.2);
-    const volatility = indicators.atr * 1.5; // ATR 변동성 증가
+    const volatility = indicators.atr * 1.5;
     
     const predictionDays = 10;
     const predictions = [lastPrice];
+    const sentimentPredictions = [lastPrice];
     let currentPrice = lastPrice;
+    let currentSentimentPrice = lastPrice;
+    
+    // 감성 분석 가중치 계산 (sentimentScore를 -1.5 ~ 1.5 범위로 정규화)
+    const sentimentWeight = (sentimentScore / 10) * 1.5;
     
     for (let i = 0; i < predictionDays; i++) {
-      // 기본 추세 증가
+      // 기존 예측 계산
       const trend = predictionFactor * volatility * 1.2;
-      
-      // 주기적 변동성 증가
       const oscillation = Math.sin(i * Math.PI / 3) * volatility * 0.5;
-      
-      // 랜덤 노이즈 추가
       const randomNoise = (Math.random() - 0.5) * volatility * 0.3;
-      
       const bbPosition = (currentPrice - indicators.bb_middle) / (indicators.bb_upper - indicators.bb_middle);
       const meanReversion = (0.5 - bbPosition) * volatility * 0.3;
-      
-      // 최종 가격 변화량에 노이즈 추가
       const priceChange = trend + oscillation + meanReversion + randomNoise;
       
+      // 감성 분석 기반 예측 계산
+      const sentimentTrend = sentimentWeight * volatility * 1.2;
+      const sentimentPriceChange = sentimentTrend + oscillation + meanReversion + randomNoise;
+      
       currentPrice += priceChange;
-      const maxPrice = indicators.bb_upper * 1.2;  // 상단 범위 증가
-      const minPrice = indicators.bb_lower * 0.8;  // 하단 범위 증가
+      currentSentimentPrice += sentimentPriceChange;
+      
+      const maxPrice = indicators.bb_upper * 1.2;
+      const minPrice = indicators.bb_lower * 0.8;
+      
       currentPrice = Math.min(Math.max(currentPrice, minPrice), maxPrice);
+      currentSentimentPrice = Math.min(Math.max(currentSentimentPrice, minPrice), maxPrice);
       
       predictions.push(currentPrice);
+      sentimentPredictions.push(currentSentimentPrice);
     }
     
-    // 예측 데이터 추가
+    // 차트 데이터 업데이트 부분 수정
     const originalData = chartData.value.datasets[0].data;
     const predictionDates = generateFutureDates(chartData.value.labels[chartData.value.labels.length - 1], predictionDays);
     
@@ -224,35 +240,67 @@ async function calculatePrediction() {
       labels: [...chartData.value.labels, ...predictionDates],
       datasets: [
         {
-          ...chartData.value.datasets[0],
-          data: originalData
+          label: '종가',
+          data: originalData,
+          borderColor: '#36A2EB',
+          tension: 0.1
         },
         {
-          label: '예측',
+          label: '기술적 예측',
           data: [...Array(originalData.length - 1).fill(null), ...predictions],
-          borderColor: '#FF9800',
+          borderColor: '#FF9999',
           borderDash: [5, 5],
-          tension: 0
+          tension: 0.1
+        },
+        {
+          label: '뉴스 감성 예측',
+          data: [...Array(originalData.length - 1).fill(null), ...sentimentPredictions],
+          borderColor: '#99FF99',
+          borderDash: [5, 5],
+          tension: 0.1
         }
       ]
     };
+
+    // 감성 점수에 따른 배경색 추가
+    chartOptions.value.plugins.annotation.annotations = {
+      box1: {
+        type: 'box',
+        xMin: chartData.value.labels[chartData.value.labels.length - predictionDays - 1],
+        xMax: chartData.value.labels[chartData.value.labels.length - 1],
+        yMin: 'min',
+        yMax: 'max',
+        backgroundColor: sentimentScore > 0 ? 'rgba(0, 255, 0, 0.1)' : 
+                        sentimentScore < 0 ? 'rgba(255, 0, 0, 0.1)' : 
+                        'rgba(128, 128, 128, 0.1)',
+        borderWidth: 0
+      }
+    };
+    
+    showPrediction.value = true;
+
   } catch (error) {
-    console.error('예측 계산 실패:', error);
+    console.error('예측 계산 중 오류:', error);
     await Swal.fire({
       title: '오류',
-      text: '예측 계산 중 오류가 발생했습니다.',
+      text: '예측을 계산하는 중 오류가 발생했습니다.',
       icon: 'error',
       confirmButtonText: '확인'
     });
   }
 }
 
+// 미래 날짜 생성 함수 추가
 function generateFutureDates(lastDate, days) {
   const dates = [];
   let currentDate = new Date(lastDate);
   
   for (let i = 0; i < days; i++) {
     currentDate.setDate(currentDate.getDate() + 1);
+    // 주말 건너뛰기
+    while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
     dates.push(currentDate.toISOString().split('T')[0]);
   }
   

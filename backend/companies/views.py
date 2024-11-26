@@ -1,8 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets, permissions, filters
 from .models import UserInterest, Company, StockPrice
-from .serializers import UserInterestSerializer, CompanySerializer
-import pandas_datareader.data as web
+from news.models import NewsArticle  # News 모델 대신 NewsArticle 모델을 import
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from datetime import datetime, timedelta
@@ -24,12 +23,32 @@ import hashlib
 import time
 import os
 import pandas_ta as ta
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+from django.db.models import Q
 
 # 전역 변수로 토큰 정보 저장
 _access_token = None
 _token_expires_at = None
 _last_token_request = None
 _token_refresh_interval = 6 * 3600  # 6시간 (초 단위)
+
+# 모델 경로 설정
+MODEL_PATH = os.path.join(settings.BASE_DIR, 'sentiment', 'sentiment_model')
+
+# KlueRoberta 모델 초기화 (글로벌 변수로 한 번만 로드)
+try:
+    tokenizer = AutoTokenizer.from_pretrained("klue/roberta-base")
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+
+    # 모델 평가 모드 전환 및 GPU 이동
+    model.eval()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+except Exception as e:
+    print(f"모델 로딩 중 오류 발생: {str(e)}")
+    model = None
+    tokenizer = None
 
 def get_access_token():
     """한국투자증권 API 접근 토큰 발급 (캐싱 및 재사용)"""
@@ -427,4 +446,86 @@ def stock_indicators(request):
         print(f"Error in stock_indicators: {str(e)}")  # 디버깅을 위한 로그 추가
         return Response({
             'error': str(e)
+        }, status=500)
+
+def analyze_sentiment(text):
+    if model is None or tokenizer is None:
+        print("모델이 로드되지 않았습니다.")
+        return 0
+
+    try:
+        # 텍스트 토크나이즈
+        inputs = tokenizer(
+            text, 
+            return_tensors="pt", 
+            truncation=True, 
+            padding=True, 
+            max_length=512
+        ).to(device)
+        
+        # 예측 수행
+        with torch.no_grad():
+            outputs = model(**inputs)
+        logits = outputs.logits
+        
+        # 가장 높은 점수의 클래스 선택
+        predicted_class = torch.argmax(logits, dim=1).item()
+        
+        # 레이블 매핑 (0, 1, 2 -> -1, 0, 1)
+        label_mapping = {0: -1, 1: 0, 2: 1}
+        return label_mapping[predicted_class]
+        
+    except Exception as e:
+        print(f"감성 분석 중 오류 발생: {str(e)}")
+        return 0  # 오류 발생 시 중립 반환
+
+@api_view(['GET'])
+def get_news_sentiment(request):
+    try:
+        stock_code = request.GET.get('stock_code')
+        if not stock_code:
+            return Response({'error': '종목 코드가 필요합니다.'}, status=400)
+
+        # 최근 10일 동안의 뉴스만 가져오기
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=10)
+        
+        # NewsArticle 모델에서 뉴스 검색
+        news_articles = NewsArticle.objects.filter(
+            Q(time__range=(start_date, end_date)),
+            Q(title__icontains=stock_code) | Q(contents__text__icontains=stock_code)
+        ).order_by('-time')[:10]
+
+        if not news_articles:
+            return Response({'sentiment_score': 0})  # 뉴스가 없으면 중립 반환
+
+        # 감성 분석 수행
+        total_sentiment = 0
+        analyzed_count = 0
+
+        for article in news_articles:
+            # 제목과 내용을 합쳐서 분석
+            contents = ' '.join([content.text for content in article.contents.all()])
+            full_text = f"{article.title} {contents}"
+            sentiment = analyze_sentiment(full_text)
+            total_sentiment += sentiment
+            analyzed_count += 1
+
+        # 최종 감성 점수 계산 (-10 ~ 10 범위로 정규화)
+        if analyzed_count > 0:
+            final_score = (total_sentiment / analyzed_count) * 10
+            # -10과 10 사이로 제한
+            final_score = max(min(final_score, 10), -10)
+        else:
+            final_score = 0
+
+        return Response({
+            'sentiment_score': final_score,
+            'analyzed_articles': analyzed_count
+        })
+
+    except Exception as e:
+        print(f"감성 분석 중 오류 발생: {str(e)}")  # 디버깅을 위한 로그 추가
+        return Response({
+            'error': f'감성 분석 중 오류가 발생했습니다: {str(e)}'
         }, status=500)

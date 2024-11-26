@@ -1,5 +1,12 @@
 from django.urls import path
-from .views import stock_data, stock_prediction, stock_current_price, stock_intraday_data, stock_indicators
+from .views import (
+    stock_data, 
+    stock_prediction, 
+    stock_current_price, 
+    stock_intraday_data, 
+    stock_indicators,
+    get_news_sentiment
+)
 
 urlpatterns = [
     path('stock/', stock_data, name='stock-data'),
@@ -7,4 +14,5 @@ urlpatterns = [
     path('stock/current/', stock_current_price, name='stock-current-price'),
     path('stock/intraday/', stock_intraday_data, name='stock-intraday-data'),
     path('stock/indicators/', stock_indicators, name='stock_indicators'),
+    path('news/sentiment/', get_news_sentiment, name='news-sentiment'),
 ] 
