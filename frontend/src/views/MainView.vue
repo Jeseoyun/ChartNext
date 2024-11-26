@@ -322,14 +322,14 @@ onMounted(() => {
 .main {
   position: relative;
   width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-y: auto;
   background-color: black;
   z-index: 1;
 }
 
 .background-video {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -343,7 +343,7 @@ onMounted(() => {
   position: relative;
   z-index: 3;
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -354,7 +354,6 @@ onMounted(() => {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   padding: 20px;
-  overflow-y: auto;
   margin-top: 80px;
 }
 
