@@ -593,14 +593,14 @@ onMounted(() => {
 
 .hot-topics {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
 .topic-item {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px;
   height: 100%;
 }
 
@@ -616,16 +616,16 @@ onMounted(() => {
 }
 
 .topic-title {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: white;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-weight: 500;
 }
 
 .topic-summary {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .no-topics {
