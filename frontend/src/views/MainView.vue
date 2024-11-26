@@ -303,21 +303,21 @@ onMounted(() => {
   margin-right: 2px;
 }
 
-.stock-list-container::-webkit-scrollbar {
+.stock-list-container :deep(::-webkit-scrollbar) {
   width: 8px;
 }
 
-.stock-list-container::-webkit-scrollbar-track {
+.stock-list-container :deep(::-webkit-scrollbar-track) {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
-.stock-list-container::-webkit-scrollbar-thumb {
+.stock-list-container :deep(::-webkit-scrollbar-thumb) {
   background: rgba(147, 80, 255, 0.5);
   border-radius: 4px;
 }
 
-.stock-list-container::-webkit-scrollbar-thumb:hover {
+.stock-list-container :deep(::-webkit-scrollbar-thumb:hover) {
   background: rgba(147, 80, 255, 0.7);
 }
 
