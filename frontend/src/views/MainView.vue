@@ -354,7 +354,8 @@ onMounted(() => {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   padding: 20px;
-  margin-top: 80px;
+  margin-top: 60px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 20px);
 }
 
 .dashboard-card {
@@ -508,7 +509,8 @@ onMounted(() => {
   left: 0;
   width: 1920px;
   height: 80px;
-  background-color: transparent;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
+  backdrop-filter: blur(8px);
   z-index: 1000;
 }
 
