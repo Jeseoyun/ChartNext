@@ -97,6 +97,7 @@ const props = defineProps({
 
 watch(() => props.ticker, async (newTicker) => {
   if (newTicker) {
+    showPrediction.value = false;  // 새로운 종목이 선택되면 예측 모드 해제
     await fetchChartData(selectedOption.value);
   }
 }, { immediate: true });
@@ -153,6 +154,7 @@ async function fetchChartData(option) {
 
 async function selectOption(option) {
   selectedOption.value = option.value;
+  showPrediction.value = false;  // 새로운 기간이 선택되면 예측 모드 해제
   await fetchChartData(option.value);
 }
 
@@ -164,7 +166,19 @@ async function calculatePrediction() {
         title: '예측 불가',
         text: '5일 이하의 기간에서는 예측 기능을 사용할 수 없습니다.',
         icon: 'warning',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        background: 'rgba(32, 33, 36, 0.85)',
+        color: '#fff',
+        confirmButtonColor: '#9350FF',
+        iconColor: '#FF9800',
+        backdrop: 'rgba(0, 0, 0, 0.7)',
+        customClass: {
+          popup: 'custom-swal-popup',
+          title: 'custom-swal-title',
+          htmlContainer: 'custom-swal-html',
+          confirmButton: 'custom-swal-confirm-button',
+          icon: 'custom-swal-icon'
+        }
       });
       showPrediction.value = false;
       return;
@@ -239,33 +253,54 @@ async function calculatePrediction() {
     // 뉴스가 있는 경우에만 감성 예측선 추가
     if (sentimentResponse.data.analyzed_articles > 0) {
       const sentimentScore = sentimentResponse.data.sentiment_score;
-      const sentimentWeight = (sentimentScore / 10) * 1.5;
       const sentimentPredictions = [lastPrice];
       let currentSentimentPrice = lastPrice;
 
-      // 감성 분석 기반 예측 계산
+      // 감성 점수 기반의 변동성 계산 (변동폭 축소)
+      const sentimentWeight = (sentimentScore / 10) * 0.8;  // 감성 가중치 (-0.8 ~ 0.8)
+      const baseVolatility = volatility * 0.6;  // 기본 변동성 축소
+      
+      // 감성 분석 ��� 측 계산
       for (let i = 0; i < predictionDays; i++) {
-        const sentimentTrend = sentimentWeight * volatility * 1.2;
-        const oscillation = Math.sin(i * Math.PI / 3) * volatility * 0.5;
-        const randomNoise = (Math.random() - 0.5) * volatility * 0.3;
-        const bbPosition = (currentSentimentPrice - indicators.bb_middle) / (indicators.bb_upper - indicators.bb_middle);
-        const meanReversion = (0.5 - bbPosition) * volatility * 0.3;
-        const sentimentPriceChange = sentimentTrend + oscillation + meanReversion + randomNoise;
+        // 1. 기본 감성 트렌드 (더 완만한 곡선)
+        const sentimentCurve = Math.tanh(i / (predictionDays * 0.7)) * sentimentWeight;
+        const baseTrend = sentimentCurve * baseVolatility;
         
-        currentSentimentPrice += sentimentPriceChange;
-        const maxPrice = indicators.bb_upper * 1.2;
-        const minPrice = indicators.bb_lower * 0.8;
+        // 2. 주기적 변동 (작은 진폭)
+        const shortCycle = Math.sin(i * Math.PI / 2.5) * baseVolatility * 0.2;
+        const longCycle = Math.sin(i * Math.PI / 5) * baseVolatility * 0.15;
+        const cyclicMovement = shortCycle + longCycle;
+        
+        // 3. 제한된 랜덤 변동
+        const randomFactor = Math.abs(sentimentWeight) * 0.3;  // 랜덤성 감소
+        const randomMovement = (Math.random() - 0.5) * baseVolatility * randomFactor;
+        
+        // 4. 가격 변화 계산
+        const priceChange = (
+          baseTrend +  // 기본 트렌드
+          cyclicMovement +  // 주기적 변동
+          randomMovement  // 랜덤 변동
+        );
+        
+        // 5. 새로운 가격 계산
+        currentSentimentPrice += priceChange;
+        
+        // 6. 범 좁은 범위로 제한
+        const bandWidth = indicators.bb_upper - indicators.bb_lower;
+        const maxPrice = indicators.bb_upper + (bandWidth * 0.15);  // 범위 축소
+        const minPrice = indicators.bb_lower - (bandWidth * 0.15);  // 범위 축소
         currentSentimentPrice = Math.min(Math.max(currentSentimentPrice, minPrice), maxPrice);
+        
         sentimentPredictions.push(currentSentimentPrice);
       }
 
-      // 감성 예측선 추가
+      // 감성 예측선 추가 (부드러운 곡선)
       datasets.push({
         label: '뉴스 감성 예측',
         data: [...Array(originalData.length - 1).fill(null), ...sentimentPredictions],
         borderColor: '#99FF99',
         borderDash: [5, 5],
-        tension: 0.1
+        tension: 0.35  // 더 부드러운 곡선
       });
     } else {
       console.log('뉴스 데이터가 없어 감성 예측선을 표시하지 않습니다.');
@@ -329,7 +364,19 @@ async function togglePrediction() {
         title: '예측 불가',
         text: '5일 이하의 기간에서는 예측 기능을 사용할 수 없습니다.',
         icon: 'warning',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        background: 'rgba(32, 33, 36, 0.85)',
+        color: '#fff',
+        confirmButtonColor: '#9350FF',
+        iconColor: '#FF9800',
+        backdrop: 'rgba(0, 0, 0, 0.7)',
+        customClass: {
+          popup: 'custom-swal-popup',
+          title: 'custom-swal-title',
+          htmlContainer: 'custom-swal-html',
+          confirmButton: 'custom-swal-confirm-button',
+          icon: 'custom-swal-icon'
+        }
       });
       return;
     }
@@ -341,6 +388,16 @@ async function togglePrediction() {
   } else {
     await fetchChartData(selectedOption.value);
   }
+}
+
+// 예측 스무딩 함수
+function smoothPredictions(predictions) {
+  const windowSize = 3;
+  return predictions.map((val, idx) => {
+    if (idx < windowSize - 1) return val;
+    const window = predictions.slice(Math.max(0, idx - windowSize + 1), idx + 1);
+    return window.reduce((a, b) => a + b, 0) / window.length;
+  });
 }
 </script>
 
@@ -629,5 +686,36 @@ button.selected {
     transform: translateX(-12px) rotate(0);
     opacity: 1;
   }
+}
+
+/* Swal 팝업 스타일 */
+:deep(.swal2-popup) {
+  background: rgba(32, 33, 36, 0.85) !important;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+:deep(.swal2-title) {
+  color: #fff !important;
+  font-size: 1.5rem !important;
+  padding-bottom: 10px !important;
+}
+
+:deep(.swal2-html-container) {
+  color: rgba(255, 255, 255, 0.8) !important;
+  padding-top: 10px !important;
+}
+
+:deep(.swal2-confirm) {
+  background-color: #9350FF !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.5px !important;
+  box-shadow: 0 0 10px rgba(147, 80, 255, 0.3) !important;
+}
+
+:deep(.swal2-icon.swal2-warning) {
+  color: #FF9800 !important;
 }
 </style>
