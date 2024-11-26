@@ -1,11 +1,12 @@
 <script setup>
+import NavBarComponent from '@/components/NavBarComponent.vue';
+import LogoComponent from '@/components/LogoComponent.vue';
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import apiClient from '@/api';
 import StockChart from '@/components/StockChart.vue';
 import SearchBar from '@/components/SearchBar.vue';
-import NavigationBar from '@/components/NavigationBar.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -88,7 +89,10 @@ onMounted(() => {
         <source src="@/assets/main_background.mp4" type="video/mp4" />
       </video>
       <div class="content">
-        <navigation-bar />
+        <div class="fixed-header">
+          <LogoComponent />
+          <NavBarComponent />
+        </div>
         
         <!-- 검색 영역 -->
         <v-container class="search-container">
@@ -206,7 +210,7 @@ onMounted(() => {
 }
 
 .content-container {
-  margin-top: 20px;
+  margin-top: 100px;
   overflow-y: auto;
 }
 
@@ -305,5 +309,19 @@ onMounted(() => {
 
 .text-h6 {
   font-size: 1.25rem;
+}
+
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 80px;
+  background-color: transparent;
+  z-index: 1000;
+}
+
+.search-container {
+  margin-top: 80px;
 }
 </style>

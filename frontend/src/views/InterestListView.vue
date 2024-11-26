@@ -3,7 +3,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '@/api';
 import SearchBar from '@/components/SearchBar.vue';
-import NavigationBar from '@/components/NavigationBar.vue';
+import NavBarComponent from '@/components/NavBarComponent.vue';
+import LogoComponent from '@/components/LogoComponent.vue';
 
 const router = useRouter();
 const stocks = ref([]);
@@ -85,8 +86,11 @@ onMounted(() => {
 
 <template>
   <v-container fluid class="fill-height">
-    <!-- 네비게이션 바 -->
-    <navigation-bar />
+    <!-- 네비게이션 바를 fixed header로 변경 -->
+    <div class="fixed-header">
+      <LogoComponent />
+      <NavBarComponent />
+    </div>
 
     <v-row align="center" justify="center">
       <v-col cols="12" sm="10" md="8">
@@ -397,5 +401,21 @@ onMounted(() => {
   -webkit-text-fill-color: white !important;
   transition: background-color 5000s ease-in-out 0s;
   background-color: transparent !important;
+}
+
+/* fixed header 스타일 추가 */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 80px;
+  background-color: transparent;
+  z-index: 1000;
+}
+
+/* 컨텐츠 여백 조정 */
+.v-row {
+  margin-top: 80px;
 }
 </style>

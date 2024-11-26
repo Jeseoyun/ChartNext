@@ -3,7 +3,8 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import apiClient from '@/api';
-import NavigationBar from '@/components/NavigationBar.vue';
+import NavBarComponent from '@/components/NavBarComponent.vue';
+import LogoComponent from '@/components/LogoComponent.vue';
 
 const router = useRouter();
 const userStocks = ref([]);
@@ -80,7 +81,10 @@ onMounted(() => {
         <source src="@/assets/main_background.mp4" type="video/mp4" />
       </video>
       <div class="content">
-        <navigation-bar />
+        <div class="fixed-header">
+          <LogoComponent />
+          <NavBarComponent />
+        </div>
         
         <div class="dashboard">
           <v-card class="dashboard-card">
@@ -234,6 +238,7 @@ onMounted(() => {
   gap: 20px;
   padding: 20px;
   overflow-y: auto;
+  margin-top: 80px;
 }
 
 .dashboard-card {
@@ -379,5 +384,15 @@ onMounted(() => {
 .edit-interests-btn:hover {
   background: rgba(255, 255, 255, 0.1) !important;
   border-color: #9350ff !important;
+}
+
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 80px;
+  background-color: transparent;
+  z-index: 1000;
 }
 </style>
