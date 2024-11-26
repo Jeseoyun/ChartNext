@@ -14,6 +14,10 @@ const userStore = useUserStore();
 const selectedStock = ref(null);
 const userStocks = ref([]);
 const selectedStockPrice = ref(null);
+const stockChartRef = ref(null);
+
+// 예측 설명 다이얼로그 상태
+const showPredictionHelp = ref(false);
 
 // 검색 결과 클릭 핸들러
 const handleSearchResultClick = (stock) => {
@@ -77,6 +81,13 @@ watch(selectedStock, (newStock) => {
   loadStockPrice(newStock);
 });
 
+// 예측 버튼 클릭 핸들러 추가
+const handlePredictionClick = () => {
+  if (stockChartRef.value) {
+    stockChartRef.value.togglePrediction();
+  }
+};
+
 onMounted(() => {
   loadUserStocks();
 });
@@ -114,26 +125,40 @@ onMounted(() => {
                       <span 
                         :class="[
                           'ml-2',
-                          selectedStockPrice.change_ratio > 0 ? 'text-red' : 'text-blue',
+                          selectedStockPrice.change_rate > 0 ? 'text-red' : 'text-blue'
                         ]"
                       >
-                        {{ selectedStockPrice.change_ratio > 0 ? '+' : '' }}{{ selectedStockPrice.change_ratio.toFixed(2) }}%
+                        {{ selectedStockPrice.change_rate }}%
                       </span>
                     </template>
                   </div>
-                  <v-btn
-                    icon
-                    variant="text"
-                    :color="isInterested(selectedStock) ? 'white' : 'grey-darken-2'"
-                    @click="toggleInterest(selectedStock)"
-                  >
-                    <v-icon>{{ isInterested(selectedStock) ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
-                  </v-btn>
+                  <div>
+                    <!-- 예측 버튼과 도움말 버튼 -->
+                    <v-btn
+                      icon
+                      variant="text"
+                      color="grey-lighten-1"
+                      class="mr-1"
+                      @click="handlePredictionClick"
+                    >
+                      <v-icon>mdi-chart-line</v-icon>
+                    </v-btn>
+                    <v-btn
+                      icon
+                      variant="text"
+                      color="grey-lighten-1"
+                      @click="() => toggleInterest(selectedStock)"
+                    >
+                      <v-icon>{{ isInterested(selectedStock) ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
+                    </v-btn>
+                  </div>
                 </v-card-title>
                 <v-card-text>
                   <stock-chart
                     v-if="selectedStock"
+                    ref="stockChartRef"
                     :ticker="selectedStock.code"
+                    @show-help="showPredictionHelp = true"
                   ></stock-chart>
                   <div v-else class="text-center pa-4">
                     종목을 검색하여 차트를 확인하세요
@@ -173,6 +198,39 @@ onMounted(() => {
         </v-container>
       </div>
     </div>
+
+    <!-- 예측 설명 다이얼로그 -->
+    <v-dialog v-model="showPredictionHelp" max-width="500">
+      <v-card class="prediction-help-dialog">
+        <v-card-title class="text-h6">
+          주가 예측 차트 설명
+          <v-btn
+            icon
+            variant="text"
+            @click="showPredictionHelp = false"
+            class="float-right"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-4">이 예측 차트는 다음과 같은 기술적 지표들을 종합적으로 분석하여 생성됩니다:</p>
+          
+          <h3 class="mb-2 text-subtitle-1">사용된 기술적 지표</h3>
+          <ul class="mb-4">
+            <li><strong>RSI (상대강도지수)</strong>: 과매수/과매도 상태를 판단 (30% 반영)</li>
+            <li><strong>MACD (이동평균수렴확산)</strong>: 중장기 추세 방향 분석 (40% 반영)</li>
+            <li><strong>볼린저 밴드</strong>: 현재 가격의 변동성 범위 확인 (30% 반영)</li>
+            <li><strong>ATR (평균진폭)</strong>: 가격 변동의 크기 측정에 사용</li>
+          </ul>
+
+          <p class="text-caption">
+            * 이 예측은 기술적 분석에 기반한 참고 자료이며, 실제 주가는 다양한 요인에 의해 변동될 수 있습니다.<br>
+            * 투자의 최종 판단은 투자자 본인의 책임하에 이루어져야 합니다.
+          </p>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -324,5 +382,47 @@ onMounted(() => {
   max-width: 1160px;
   margin: 0 auto;
   margin-top: 100px;
+}
+
+.prediction-help-dialog {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+}
+
+.prediction-help-dialog :deep(.v-card-title) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prediction-help-dialog ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.prediction-help-dialog li {
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.prediction-help-dialog li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #FF9800;
+}
+
+.text-caption {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.float-right {
+  position: absolute;
+  right: 8px;
+  top: 8px;
 }
 </style>

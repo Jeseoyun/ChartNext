@@ -18,3 +18,18 @@ class UserInterest(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.company.name}"
+
+class StockPrice(models.Model):
+    stock_code = models.CharField(max_length=20)
+    date = models.DateField()
+    open = models.FloatField()
+    high = models.FloatField()
+    low = models.FloatField()
+    close = models.FloatField()
+    volume = models.BigIntegerField()
+    
+    class Meta:
+        unique_together = ('stock_code', 'date')
+        indexes = [
+            models.Index(fields=['stock_code', 'date']),
+        ]

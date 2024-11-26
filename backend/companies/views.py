@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets, permissions, filters
-from .models import UserInterest, Company
+from .models import UserInterest, Company, StockPrice
 from .serializers import UserInterestSerializer, CompanySerializer
 import pandas_datareader.data as web
 from rest_framework.decorators import api_view, permission_classes
@@ -23,6 +23,7 @@ import jwt
 import hashlib
 import time
 import os
+import pandas_ta as ta
 
 # 전역 변수로 토큰 정보 저장
 _access_token = None
@@ -343,3 +344,87 @@ def stock_intraday_data(request):
             
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+def stock_indicators(request):
+    stock_code = request.GET.get('stock_code')
+    period = request.GET.get('period', '6mo')
+    
+    try:
+        # 기간에 따른 날짜 범위 계산
+        end_date = datetime.now()
+        if period == '1mo':
+            start_date = end_date - timedelta(days=30)
+        elif period == '3mo':
+            start_date = end_date - timedelta(days=90)
+        elif period == '6mo':
+            start_date = end_date - timedelta(days=180)
+        elif period == '1y':
+            start_date = end_date - timedelta(days=365)
+        else:
+            start_date = end_date - timedelta(days=180)  # 기본값
+
+        # yfinance를 사용하여 데이터 가져오기
+        is_korean = stock_code.isdigit()
+        if is_korean:
+            ticker = yf.Ticker(f"{stock_code}.KS")
+        else:
+            ticker = yf.Ticker(stock_code)
+            
+        df = ticker.history(start=start_date, end=end_date)
+        
+        if len(df) < 20:
+            return Response({
+                'error': '충분한 데이터가 없습니다.'
+            }, status=400)
+
+        # RSI 계산 (14일)
+        delta = df['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        df['RSI'] = 100 - (100 / (1 + rs))
+
+        # MACD 계산
+        exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+        exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+        df['MACD'] = exp1 - exp2
+        df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
+
+        # 볼린저 밴드 계산
+        df['MA20'] = df['Close'].rolling(window=20).mean()
+        df['STD20'] = df['Close'].rolling(window=20).std()
+        df['Upper_Band'] = df['MA20'] + (df['STD20'] * 2)
+        df['Lower_Band'] = df['MA20'] - (df['STD20'] * 2)
+
+        # ATR 계산
+        high_low = df['High'] - df['Low']
+        high_close = np.abs(df['High'] - df['Close'].shift())
+        low_close = np.abs(df['Low'] - df['Close'].shift())
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        true_range = np.max(ranges, axis=1)
+        df['ATR'] = true_range.rolling(14).mean()
+
+        # 결측치 처리
+        df = df.fillna(method='ffill').fillna(method='bfill')
+
+        # 마지막 데이터 포인트의 지표값 추출
+        latest = df.iloc[-1]
+        
+        return Response({
+            'rsi': float(latest['RSI']),
+            'macd': float(latest['MACD']),
+            'macd_signal': float(latest['Signal_Line']),
+            'bb_upper': float(latest['Upper_Band']),
+            'bb_middle': float(latest['MA20']),
+            'bb_lower': float(latest['Lower_Band']),
+            'atr': float(latest['ATR']),
+            'last_price': float(latest['Close']),
+            'last_date': latest.name.strftime('%Y-%m-%d')
+        })
+        
+    except Exception as e:
+        print(f"Error in stock_indicators: {str(e)}")  # 디버깅을 위한 로그 추가
+        return Response({
+            'error': str(e)
+        }, status=500)
