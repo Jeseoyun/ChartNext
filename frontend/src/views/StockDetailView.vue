@@ -92,15 +92,13 @@ onMounted(() => {
         <div class="fixed-header">
           <LogoComponent />
           <NavBarComponent />
+          <div class="search-container">
+            <search-bar
+              @result-selected="handleSearchResultClick"
+            />
+          </div>
         </div>
         
-        <!-- 검색 영역 -->
-        <v-container class="search-container">
-          <search-bar
-            @result-selected="handleSearchResultClick"
-          />
-        </v-container>
-
         <!-- 메인 콘텐츠 영역 -->
         <v-container class="content-container">
           <v-row>
@@ -182,14 +180,14 @@ onMounted(() => {
 .main {
   position: relative;
   width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   background-color: black;
   z-index: 1;
+  overflow-y: auto;
 }
 
 .background-video {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -203,15 +201,14 @@ onMounted(() => {
   position: relative;
   z-index: 3;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   padding: 20px;
   display: flex;
   flex-direction: column;
 }
 
 .content-container {
-  margin-top: 100px;
-  overflow-y: auto;
+  margin-top: 180px;
 }
 
 .chart-card, .interest-list-card {
@@ -280,10 +277,12 @@ onMounted(() => {
 @media (max-width: 960px) {
   .content-container {
     padding: 0;
+    margin-top: 160px;
   }
 
   .search-container {
     padding: 0 20px;
+    margin-top: 10px;
   }
 
   .search-results {
@@ -315,13 +314,15 @@ onMounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 1920px;
-  height: 80px;
+  width: 100%;
   background-color: transparent;
   z-index: 1000;
+  padding: 20px;
 }
 
 .search-container {
-  margin-top: 80px;
+  max-width: 1160px;
+  margin: 0 auto;
+  margin-top: 100px;
 }
 </style>
