@@ -190,23 +190,60 @@
             @click="toggleChatbot"
             :class="{ 'active': isChatbotOpen }"
           >
-            <v-icon>mdi-robot</v-icon>
+            <v-icon>mdi-robot</v-icon> 
           </v-btn>
 
           <!-- 챗봇 창 -->
-          <div class="chatbot-section" :class="{ 'open': isChatbotOpen }">
+          <div class="chatbot-section" :class="{ 'open': isChatbotOpen }" ref="chatbotSection">
             <div class="chatbot-header">
-              <h3>차트넥스트 GPT</h3>
-              <v-btn icon size="small" @click="toggleChatbot">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </div>
-            <div class="chat-messages" ref="chatMessages">
-              <div v-for="(msg, index) in chatMessages" :key="index" 
-                   :class="['chat-message', msg.type]">
-                <div class="message-content">{{ msg.text }}</div>
+              <h3>뉴스 GPT</h3>
+              <div class="header-actions">
+                <v-btn icon size="small" @click="toggleChatbot">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
               </div>
             </div>
+            
+            <!-- 리사이즈 핸들 부분 수정 -->
+            <div class="resize-handle top" @mousedown="(e) => startResize('top', e)"></div>
+            <div class="resize-handle right" @mousedown="(e) => startResize('right', e)"></div>
+            <div class="resize-handle bottom" @mousedown="(e) => startResize('bottom', e)"></div>
+            <div class="resize-handle left" @mousedown="(e) => startResize('left', e)"></div>
+            <div class="resize-handle top-left" @mousedown="(e) => startResize('top-left', e)"></div>
+            <div class="resize-handle top-right" @mousedown="(e) => startResize('top-right', e)"></div>
+            <div class="resize-handle bottom-left" @mousedown="(e) => startResize('bottom-left', e)"></div>
+            <div class="resize-handle bottom-right" @mousedown="(e) => startResize('bottom-right', e)"></div>
+            
+            <div class="chat-messages" ref="chatMessagesRef">
+              <div v-for="(msg, index) in chatMessages" :key="index" 
+                   :class="['chat-message', msg.type]">
+                <v-card
+                  :class="['message-card', msg.type]"
+                  elevation="0"
+                  rounded="lg"
+                >
+                  <v-card-text 
+                    class="message-content"
+                    v-html="msg.type === 'bot' ? marked(msg.text) : msg.text"
+                  ></v-card-text>
+                </v-card>
+              </div>
+              <!-- 로딩 애니메이션 추가 -->
+              <div v-if="isLoading" class="chat-message bot">
+                <v-card class="message-card bot loading-message" elevation="0" rounded="lg">
+                  <v-card-text class="message-content">
+                    <v-progress-circular
+                      indeterminate
+                      color="rgba(147, 80, 255, 0.8)"
+                      size="20"
+                      width="2"
+                    ></v-progress-circular>
+                    <span class="loading-text">답변 생성 중...</span>
+                  </v-card-text>
+                </v-card>
+              </div>
+            </div>
+            
             <div class="chat-input">
               <v-text-field
                 v-model="chatInput"
@@ -217,6 +254,7 @@
                 density="compact"
                 variant="outlined"
                 hide-details
+                :disabled="isLoading"
               ></v-text-field>
             </div>
           </div>
@@ -227,12 +265,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import LogoComponent from '@/components/LogoComponent.vue';
 import NavBarComponent from '@/components/NavBarComponent.vue';
 import apiClient from '@/api';
 import { useRouter } from 'vue-router';  // router 추가
 import { useUserStore } from '@/stores/user';
+import { marked } from 'marked';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -259,6 +298,18 @@ const isChatbotOpen = ref(false);
 const isLiked = ref(false);
 const likeCount = ref(0);
 const isLoggedIn = computed(() => userStore.isLoggedIn);
+const isLoading = ref(false);
+const chatbotSection = ref(null);
+const isResizing = ref(false);
+const resizeDirection = ref('');
+const startPos = ref({ x: 0, y: 0 });
+const startSize = ref({ width: 0, height: 0 });
+
+// marked 설정
+marked.setOptions({
+  breaks: true,  // \n을 <br>로 변환
+  gfm: true,     // GitHub Flavored Markdown 활성화
+});
 
 // 유틸리티 함수들
 const formatDate = (dateString) => {
@@ -340,21 +391,45 @@ const fetchArticle = async () => {
 
 // 챗봇 메시지 전송
 const sendMessage = async () => {
-  if (!chatInput.value.trim()) return;
+  if (!chatInput.value.trim() || isLoading.value) return;
 
   const userMessage = chatInput.value;
   chatMessages.value.push({ type: 'user', text: userMessage });
   chatInput.value = '';
+  isLoading.value = true;
 
   try {
-    const response = await apiClient.post('/api/chatbot/', {
-      question: userMessage,
-      context: article.value.title + ' ' + article.value.contents.map(c => c.text).join(' ')
+    const response = await apiClient.post(`/news/${props.id}/chatbot/`, {
+      question: userMessage
     });
-    chatMessages.value.push({ type: 'bot', text: response.data.answer });
+    
+    if (response.data.answer) {
+      chatMessages.value.push({ type: 'bot', text: response.data.answer });
+    } else {
+      throw new Error('응답에 답변이 없습니다.');
+    }
+    
   } catch (error) {
     console.error('챗봇 응답 실패:', error);
-    chatMessages.value.push({ type: 'bot', text: '죄송합니다. 오류가 발생했습니다.' });
+    let errorMessage = '죄송합니다. 오류가 발생했습니다.';
+    
+    if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    }
+    
+    chatMessages.value.push({ 
+      type: 'bot', 
+      text: errorMessage
+    });
+  } finally {
+    isLoading.value = false;
+    // 채팅 메시지 영역 스크롤
+    nextTick(() => {
+      const chatMessagesEl = chatMessagesRef.value;
+      if (chatMessagesEl) {
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+      }
+    });
   }
 };
 
@@ -466,6 +541,91 @@ const goToNewsDetail = (article) => {
     name: 'NewsDetail',
     params: { id: article.id }
   });
+};
+
+// ref 추가
+const chatMessagesRef = ref(null);
+
+// 리사이즈 시작
+const startResize = (direction, e) => {
+  e.preventDefault(); // 이벤트 기본 동작 방지
+  isResizing.value = true;
+  resizeDirection.value = direction;
+  
+  const chatbot = chatbotSection.value;
+  startPos.value = {
+    x: e.clientX,
+    y: e.clientY
+  };
+  startSize.value = {
+    width: chatbot.offsetWidth,
+    height: chatbot.offsetHeight
+  };
+  
+  document.addEventListener('mousemove', handleResize);
+  document.addEventListener('mouseup', stopResize);
+};
+
+// 리사이즈 처리
+const handleResize = (e) => {
+  if (!isResizing.value) return;
+  
+  const chatbot = chatbotSection.value;
+  const deltaX = e.clientX - startPos.value.x;
+  const deltaY = e.clientY - startPos.value.y;
+  
+  const minWidth = 280;
+  const maxWidth = 500;
+  const minHeight = 300;
+  const maxHeight = 800;
+  
+  let newWidth = startSize.value.width;
+  let newHeight = startSize.value.height;
+  
+  switch (resizeDirection.value) {
+    case 'right':
+      newWidth = startSize.value.width + deltaX;
+      break;
+    case 'left':
+      newWidth = startSize.value.width - deltaX;
+      break;
+    case 'top':
+      newHeight = startSize.value.height - deltaY;
+      break;
+    case 'bottom':
+      newHeight = startSize.value.height + deltaY;
+      break;
+    case 'top-right':
+      newWidth = startSize.value.width + deltaX;
+      newHeight = startSize.value.height - deltaY;
+      break;
+    case 'top-left':
+      newWidth = startSize.value.width - deltaX;
+      newHeight = startSize.value.height - deltaY;
+      break;
+    case 'bottom-right':
+      newWidth = startSize.value.width + deltaX;
+      newHeight = startSize.value.height + deltaY;
+      break;
+    case 'bottom-left':
+      newWidth = startSize.value.width - deltaX;
+      newHeight = startSize.value.height + deltaY;
+      break;
+  }
+  
+  // 크기 제한 적용
+  newWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+  newHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
+  
+  chatbot.style.width = `${newWidth}px`;
+  chatbot.style.height = `${newHeight}px`;
+};
+
+// 리사이즈 종료
+const stopResize = () => {
+  isResizing.value = false;
+  document.removeEventListener('mousemove', handleResize);
+  document.removeEventListener('mouseup', stopResize);
 };
 
 onMounted(() => {
@@ -601,7 +761,7 @@ onUnmounted(() => {
 
 .chatbot-section {
   position: fixed;
-  right: -400px;
+  right: -600px;
   width: 280px;
   height: 500px;
   top: 100%;
@@ -610,9 +770,13 @@ onUnmounted(() => {
   border-radius: 12px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: right 0.3s ease;
+  transition: right 0.3s ease, height 0.3s ease;
   display: flex;
   flex-direction: column;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  min-height: 300px;
+  max-height: 800px;
+  resize: vertical;
 }
 
 .chatbot-section.open {
@@ -624,9 +788,10 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px 12px 0 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
 }
 
 .chatbot-header h3 {
@@ -634,6 +799,7 @@ onUnmounted(() => {
   font-size: 16px;
   font-family: 'AppleSDGothicNeoB', sans-serif;
   margin: 0;
+  text-align: center;
 }
 
 .chatbot-header .v-btn {
@@ -643,40 +809,93 @@ onUnmounted(() => {
   color: #888;
 }
 
+.header-actions {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147, 80, 255, 0.5) rgba(255, 255, 255, 0.1);
 }
 
 .chat-message {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   max-width: 85%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-message.user {
   margin-left: auto;
+  align-items: flex-end;
 }
 
 .chat-message.bot {
   margin-right: auto;
+  align-items: flex-start;
+}
+
+.message-card {
+  position: relative;
+  margin: 0;
+  max-width: 100%;
+}
+
+.message-card.user {
+  background: rgba(147, 80, 255, 0.8) !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+.message-card.bot {
+  background: rgba(147, 80, 255, 0.2) !important;
+  border-bottom-left-radius: 4px !important;
 }
 
 .message-content {
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 8px 12px !important;
+  color: white !important;
   font-size: 14px;
   line-height: 1.4;
+  word-break: break-word;
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
 }
 
-.chat-message.user .message-content {
-  background: #4a9eff;
-  color: white;
+/* 말풍선 꼬리 효과 */
+.message-card.user::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -8px;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-left-color: rgba(147, 80, 255, 0.8);
+  border-right: 0;
+  border-bottom: 0;
 }
 
-.chat-message.bot .message-content {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.message-card.bot::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-right-color: rgba(147, 80, 255, 0.2);
+  border-left: 0;
+  border-bottom: 0;
+}
+
+/* 봇 메시지 내용 색상 조정 */
+.message-card.bot .message-content {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .chat-input {
@@ -693,11 +912,28 @@ onUnmounted(() => {
 .chat-input :deep(.v-field__input) {
   color: #fff !important;
   min-height: 36px;
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
 }
 
 .chat-input :deep(.v-field__append-inner) {
-  color: #4a9eff;
+  color: rgba(147, 80, 255, 0.8) !important;
   cursor: pointer;
+}
+
+.chat-input :deep(.v-field__append-inner:hover) {
+  color: rgba(147, 80, 255, 1) !important;
+}
+
+.chat-input :deep(.v-field--focused) {
+  border-color: rgba(147, 80, 255, 0.5) !important;
+}
+
+.chat-input :deep(.v-field__outline) {
+  color: rgba(147, 80, 255, 0.3) !important;
+}
+
+.chat-input :deep(.v-field__outline--focused) {
+  color: rgba(147, 80, 255, 0.5) !important;
 }
 
 .comments-section {
@@ -1051,7 +1287,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* 메인 컨텐츠 여백 조정 */
+/* 메인 컨츠 여백 조정 */
 .news-content-wrapper {
   max-width: 1200px;
   margin: 0 auto;
@@ -1134,5 +1370,193 @@ onUnmounted(() => {
   text-align: center;
   margin-top: 10px;
   font-family: 'AppleSDGothicNeoL', sans-serif;
+}
+
+/* 채팅 메시지 영역 스크롤바 스타일링 */
+.chat-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(147, 80, 255, 0.5);
+  border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 80, 255, 0.7);
+}
+
+/* 마크다운 스타일 */
+.message-content :deep(p) {
+  margin: 0;
+}
+
+.message-content :deep(strong) {
+  color: #fff;
+  font-weight: 700;
+}
+
+.message-content :deep(code) {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.message-content :deep(ul), 
+.message-content :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.message-content :deep(li) {
+  margin: 4px 0;
+}
+
+.message-content :deep(blockquote) {
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+  margin: 8px 0;
+  padding-left: 12px;
+}
+
+/* 챗봇 전체 폰트 스타일 */
+.chatbot-section {
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  /* ... 기존 스타일 유지 ... */
+}
+
+/* 메시지 내용 폰트 스타일 */
+.message-content {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  /* ... 기존 스타일 유지 ... */
+}
+
+/* 입력 필드 폰트 스타일 */
+.chat-input :deep(.v-field__input) {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  /* ... 기존 스타일 유지 ... */
+}
+
+/* 마크다운 스타일 폰트 수정 */
+.message-content :deep(p),
+.message-content :deep(strong),
+.message-content :deep(li),
+.message-content :deep(blockquote) {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+}
+
+/* 코드 스타일만 모노스페이스 폰트 유지 */
+.message-content :deep(code) {
+  font-family: monospace;
+  /* ... 기존 스타일 유지 ... */
+}
+
+/* 플레이스홀더 텍스트 폰트 스타일 */
+.chat-input :deep(.v-field__input::placeholder) {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+}
+
+/* 스타일 추가 */
+.resize-handle {
+  position: absolute;
+  background: transparent;
+  z-index: 1000;
+}
+
+.resize-handle.top {
+  top: -3px;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.resize-handle.right {
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.resize-handle.bottom {
+  bottom: -3px;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.resize-handle.left {
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.resize-handle.top-left {
+  top: -3px;
+  left: -3px;
+  width: 10px;
+  height: 10px;
+  cursor: nw-resize;
+}
+
+.resize-handle.top-right {
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  cursor: ne-resize;
+}
+
+.resize-handle.bottom-left {
+  bottom: -3px;
+  left: -3px;
+  width: 10px;
+  height: 10px;
+  cursor: sw-resize;
+}
+
+.resize-handle.bottom-right {
+  bottom: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  cursor: se-resize;
+}
+
+.resize-handle:hover {
+  background: rgba(147, 80, 255, 0.3);
+}
+
+.loading-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-text {
+  margin-left: 8px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* 채팅창 transition 수정 */
+.chatbot-section {
+  transition: right 0.3s ease, height 0.3s ease;
+  min-height: 300px;
+  max-height: 800px;
+  resize: vertical;
+}
+
+/* 입력창 비활성화 스타일 */
+.chat-input :deep(.v-field--disabled) {
+  opacity: 0.7;
 }
 </style> 
