@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, defineExpose } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Line, Chart } from 'vue-chartjs';
 import { 
   Chart as ChartJS,
@@ -13,6 +13,7 @@ import {
 } from 'chart.js';
 import apiClient from '@/api';
 import 'chartjs-plugin-annotation';
+import Swal from 'sweetalert2';
 
 // Chart.js 등록
 ChartJS.register(
@@ -156,6 +157,18 @@ async function selectOption(option) {
 
 async function calculatePrediction() {
   try {
+    // 5일 이하 기간 체크
+    if (selectedOption.value === '1d' || selectedOption.value === '5d') {
+      await Swal.fire({
+        title: '예측 불가',
+        text: '5일 이하의 기간에서는 예측 기능을 사용할 수 없습니다.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
+      showPrediction.value = false;
+      return;
+    }
+
     const response = await apiClient.get('/companies/stock/indicators/', {
       params: {
         stock_code: props.ticker,
@@ -166,39 +179,38 @@ async function calculatePrediction() {
     const indicators = response.data;
     const lastPrice = chartData.value.datasets[0].data[chartData.value.datasets[0].data.length - 1];
     
-    // RSI, MACD, 볼린저 밴드를 기반으로 예측 계산
-    const rsiSignal = indicators.rsi > 70 ? -1 : indicators.rsi < 30 ? 1 : 0;
-    const macdSignal = indicators.macd > indicators.macd_signal ? 1 : -1;
+    // 변동성 증가를 위한 수정
+    const rsiSignal = indicators.rsi > 70 ? -1.5 : indicators.rsi < 30 ? 1.5 : 0;
+    const macdSignal = indicators.macd > indicators.macd_signal ? 1.5 : -1.5;
     const bbSignal = (lastPrice - indicators.bb_lower) / (indicators.bb_upper - indicators.bb_lower);
     
-    // 각 지표의 가중치를 적용한 예측값 계산
-    const predictionFactor = (rsiSignal * 0.3 + macdSignal * 0.4 + bbSignal * 0.3);
-    const volatility = indicators.atr; // ATR을 변동성 측정에 사용
+    // 변동성 가중치 증가
+    const predictionFactor = (rsiSignal * 0.4 + macdSignal * 0.4 + bbSignal * 0.2);
+    const volatility = indicators.atr * 1.5; // ATR 변동성 증가
     
-    // 향후 10일간의 예측 데이터 생성
     const predictionDays = 10;
-    const predictions = [lastPrice];  // 마지막 실제 가격을 예측 배열의 첫 번째 값으로 추가
+    const predictions = [lastPrice];
     let currentPrice = lastPrice;
     
-    // 사인 함수를 사용하여 주기적인 변동성 추가
     for (let i = 0; i < predictionDays; i++) {
-      // 기본 추세
-      const trend = predictionFactor * volatility;
+      // 기본 추세 증가
+      const trend = predictionFactor * volatility * 1.2;
       
-      // 주기적 변동성 (사인 함수 사용)
-      const oscillation = Math.sin(i * Math.PI / 5) * volatility * 0.3;
+      // 주기적 변동성 증가
+      const oscillation = Math.sin(i * Math.PI / 3) * volatility * 0.5;
       
-      // 볼린저 밴드 위치에 따른 조정
+      // 랜덤 노이즈 추가
+      const randomNoise = (Math.random() - 0.5) * volatility * 0.3;
+      
       const bbPosition = (currentPrice - indicators.bb_middle) / (indicators.bb_upper - indicators.bb_middle);
-      const meanReversion = (0.5 - bbPosition) * volatility * 0.2;
+      const meanReversion = (0.5 - bbPosition) * volatility * 0.3;
       
-      // 최종 가격 변화량 계산
-      const priceChange = trend + oscillation + meanReversion;
+      // 최종 가격 변화량에 노이즈 추가
+      const priceChange = trend + oscillation + meanReversion + randomNoise;
       
-      // 볼린저 밴드 범위 내로 제한
       currentPrice += priceChange;
-      const maxPrice = indicators.bb_upper * 1.1;  // 상단 밴드의 110%
-      const minPrice = indicators.bb_lower * 0.9;  // 하단 밴드의 90%
+      const maxPrice = indicators.bb_upper * 1.2;  // 상단 범위 증가
+      const minPrice = indicators.bb_lower * 0.8;  // 하단 범위 증가
       currentPrice = Math.min(Math.max(currentPrice, minPrice), maxPrice);
       
       predictions.push(currentPrice);
@@ -220,12 +232,18 @@ async function calculatePrediction() {
           data: [...Array(originalData.length - 1).fill(null), ...predictions],
           borderColor: '#FF9800',
           borderDash: [5, 5],
-          tension: 0.4
+          tension: 0
         }
       ]
     };
   } catch (error) {
     console.error('예측 계산 실패:', error);
+    await Swal.fire({
+      title: '오류',
+      text: '예측 계산 중 오류가 발생했습니다.',
+      icon: 'error',
+      confirmButtonText: '확인'
+    });
   }
 }
 
@@ -242,6 +260,18 @@ function generateFutureDates(lastDate, days) {
 }
 
 async function togglePrediction() {
+  if (!showPrediction.value) {
+    if (selectedOption.value === '1d' || selectedOption.value === '5d') {
+      await Swal.fire({
+        title: '예측 불가',
+        text: '5일 이하의 기간에서는 예측 기능을 사용할 수 없습니다.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+  }
+  
   showPrediction.value = !showPrediction.value;
   if (showPrediction.value) {
     await calculatePrediction();
@@ -249,46 +279,227 @@ async function togglePrediction() {
     await fetchChartData(selectedOption.value);
   }
 }
-
-defineExpose({
-  togglePrediction
-});
 </script>
 
 <template>
-  <div>
-    <div class="chart" style="height: 400px;">
-      <Line 
-        v-if="chartData"
-        :data="chartData"
-        :options="chartOptions"
-      />
+  <div class="chart-container">
+    <div class="chart-wrapper">
+      <div class="chart" :class="{ 'with-prediction': showPrediction }">
+        <Line 
+          v-if="chartData"
+          :data="chartData"
+          :options="{
+            ...chartOptions,
+            maintainAspectRatio: false,
+          }"
+          style="width: calc(100% - 30px); height: 400px;"
+        />
+      </div>
+      <div class="prediction-button-container">
+        <v-btn
+          class="prediction-button"
+          :class="{ 'prediction-active': showPrediction }"
+          variant="text"
+          @click="togglePrediction"
+        >
+          <div v-if="!showPrediction" class="vertical-text">
+            <span>C</span>
+            <span>H</span>
+            <span>A</span>
+            <span>R</span>
+            <span>T</span>
+            <span class="mt-2">N</span>
+            <span>E</span>
+            <span>X</span>
+            <span>T</span>
+          </div>
+          <v-icon v-else class="reset-icon">mdi-restore</v-icon>
+        </v-btn>
+      </div>
     </div>
     <div class="chart-controls">
       <div class="period-buttons">
-        <button
-          v-for="option in options"
-          :key="option.value"
-          :class="{ selected: option.value === selectedOption }"
-          @click="selectOption(option)"
-        >
-          {{ option.label }}
-        </button>
+        <div class="period-group">
+          <button
+            v-for="option in options"
+            :key="option.value"
+            :class="{ selected: option.value === selectedOption }"
+            @click="selectOption(option)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+        <div class="help-button">
+          <v-btn
+            icon
+            variant="text"
+            color="grey-lighten-1"
+            @click="$emit('show-help')"
+          >
+            <v-icon>mdi-help-circle-outline</v-icon>
+          </v-btn>
+        </div>
       </div>
-      <v-btn
-        icon
-        variant="text"
-        color="grey-lighten-1"
-        size="small"
-        @click="$emit('show-help')"
-      >
-        <v-icon>mdi-help-circle-outline</v-icon>
-      </v-btn>
     </div>
   </div>
 </template>
 
 <style scoped>
+.chart-container {
+  position: relative;
+  width: 100%;
+}
+
+.chart-wrapper {
+  position: relative;
+  display: flex;
+  height: 400px;
+}
+
+.chart {
+  position: relative;
+  width: calc(100% - 20px);
+  height: 400px;
+}
+
+.prediction-button-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.prediction-button {
+  height: 100% !important;
+  width: 20px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  background: rgba(147, 80, 255, 0.1) !important;
+  backdrop-filter: blur(3px);
+  transition: none !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  position: relative;
+  overflow: hidden;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* 새로운 배경 애니메이션 */
+.prediction-button::before,
+.prediction-button::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(
+    circle at center,
+    rgba(147, 80, 255, 0.2),
+    rgba(80, 150, 255, 0.2),
+    transparent 70%
+  );
+  animation: moveGradient 6s ease-in-out infinite;
+  z-index: 1;
+}
+
+.prediction-button::after {
+  background: radial-gradient(
+    circle at center,
+    rgba(80, 150, 255, 0.2),
+    rgba(147, 80, 255, 0.2),
+    transparent 70%
+  );
+  animation: moveGradient 6s ease-in-out infinite reverse;
+  filter: blur(3px);
+}
+
+@keyframes moveGradient {
+  0% {
+    transform: translateY(-30%) scale(2);
+  }
+  50% {
+    transform: translateY(30%) scale(2.5);
+  }
+  100% {
+    transform: translateY(-30%) scale(2);
+  }
+}
+
+/* Vuetify 기본 스타일 제거 */
+.prediction-button .v-btn__overlay {
+  display: none !important;
+}
+
+/* 텍스트와 아이콘이 배경 위에 보이도록 z-index 조정 */
+.vertical-text, .reset-icon {
+  position: relative;
+  z-index: 2;
+}
+
+/* 호버 효과 제거 */
+.prediction-button:hover,
+.prediction-button:focus,
+.prediction-button:active {
+  background: rgba(147, 80, 255, 0.1) !important;
+}
+
+.prediction-button.prediction-active {
+  background: rgba(147, 80, 255, 0.2) !important;
+}
+
+.vertical-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 500;
+  transform: translateX(-12px);
+  position: relative;
+  z-index: 2;
+}
+
+.vertical-text span {
+  opacity: 0;
+  line-height: 1.2;
+  text-align: center;
+  animation: fadeInUp 0.5s forwards;
+}
+
+/* 각 글자별 애니메이션 딜레이 */
+.vertical-text span:nth-child(1) { animation-delay: 0.1s; }
+.vertical-text span:nth-child(2) { animation-delay: 0.2s; }
+.vertical-text span:nth-child(3) { animation-delay: 0.3s; }
+.vertical-text span:nth-child(4) { animation-delay: 0.4s; }
+.vertical-text span:nth-child(5) { animation-delay: 0.5s; }
+.vertical-text span:nth-child(6) { animation-delay: 0.7s; } /* N */
+.vertical-text span:nth-child(7) { animation-delay: 0.8s; }
+.vertical-text span:nth-child(8) { animation-delay: 0.9s; }
+.vertical-text span:nth-child(9) { animation-delay: 1.0s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
 .chart-controls {
   display: flex;
   justify-content: space-between;
@@ -298,7 +509,18 @@ defineExpose({
 
 .period-buttons {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.period-group {
+  display: flex;
   flex-wrap: wrap;
+}
+
+.help-button {
+  margin-left: auto;
 }
 
 button {
@@ -324,5 +546,25 @@ button.selected {
   background-color: #808080;
   color: white;
   border-radius: 15px;
+}
+
+.reset-icon {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 24px !important;
+  transform: translateX(-12px);
+  position: relative;
+  z-index: 2;
+  animation: rotateIn 0.5s ease-out;
+}
+
+@keyframes rotateIn {
+  from {
+    transform: translateX(-12px) rotate(-180deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-12px) rotate(0);
+    opacity: 1;
+  }
 }
 </style>

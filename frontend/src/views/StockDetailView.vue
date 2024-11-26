@@ -81,13 +81,6 @@ watch(selectedStock, (newStock) => {
   loadStockPrice(newStock);
 });
 
-// 예측 버튼 클릭 핸들러 추가
-const handlePredictionClick = () => {
-  if (stockChartRef.value) {
-    stockChartRef.value.togglePrediction();
-  }
-};
-
 onMounted(() => {
   loadUserStocks();
 });
@@ -125,29 +118,20 @@ onMounted(() => {
                       <span 
                         :class="[
                           'ml-2',
-                          selectedStockPrice.change_rate > 0 ? 'text-red' : 'text-blue'
+                          selectedStockPrice.change_ratio > 0 ? 'text-red' : 'text-blue'
                         ]"
                       >
-                        {{ selectedStockPrice.change_rate }}%
+                        {{ selectedStockPrice.change_ratio.toFixed(2) }}%
                       </span>
                     </template>
                   </div>
                   <div>
-                    <!-- 예측 버튼과 도움말 버튼 -->
+                    <!-- 예아요 버튼만 남김 -->
                     <v-btn
                       icon
                       variant="text"
                       color="grey-lighten-1"
-                      class="mr-1"
-                      @click="handlePredictionClick"
-                    >
-                      <v-icon>mdi-chart-line</v-icon>
-                    </v-btn>
-                    <v-btn
-                      icon
-                      variant="text"
-                      color="grey-lighten-1"
-                      @click="() => toggleInterest(selectedStock)"
+                      @click="toggleInterest(selectedStock)"
                     >
                       <v-icon>{{ isInterested(selectedStock) ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
                     </v-btn>
@@ -203,7 +187,7 @@ onMounted(() => {
     <v-dialog v-model="showPredictionHelp" max-width="500">
       <v-card class="prediction-help-dialog">
         <v-card-title class="text-h6">
-          주가 예측 차트 설명
+          기술적 지표 설명
           <v-btn
             icon
             variant="text"
@@ -214,19 +198,19 @@ onMounted(() => {
           </v-btn>
         </v-card-title>
         <v-card-text>
-          <p class="mb-4">이 예측 차트는 다음과 같은 기술적 지표들을 종합적으로 분석하여 생성됩니다:</p>
+          <p class="mb-4">차트에서 사용되는 주요 기술적 지표들에 대한 설명입니다:</p>
           
-          <h3 class="mb-2 text-subtitle-1">사용된 기술적 지표</h3>
+          <h3 class="mb-2 text-subtitle-1">기술적 지표</h3>
           <ul class="mb-4">
-            <li><strong>RSI (상대강도지수)</strong>: 과매수/과매도 상태를 판단 (30% 반영)</li>
-            <li><strong>MACD (이동평균수렴확산)</strong>: 중장기 추세 방향 분석 (40% 반영)</li>
-            <li><strong>볼린저 밴드</strong>: 현재 가격의 변동성 범위 확인 (30% 반영)</li>
-            <li><strong>ATR (평균진폭)</strong>: 가격 변동의 크기 측정에 사용</li>
+            <li><strong>RSI (상대강도지수)</strong>: 14일 기준으로 계산되며, 상승폭과 하락폭의 비율을 통해 과매수/과매도 상태를 판단합니다.</li>
+            <li><strong>MACD (이동평균수렴확산)</strong>: 12일 EMA와 26일 EMA의 차이를 계산하고, 9일 EMA를 시그널 라인으로 사용하여 추세를 분석합니다.</li>
+            <li><strong>볼린저 밴드</strong>: 20일 이동평균을 중심으로 ±2 표준편차 범위를 보여주어 가격 변동성을 표시합니다.</li>
+            <li><strong>ATR (평균진폭)</strong>: 14일 동안의 고가, 저가, 종가를 기반으로 가격 변동성을 측정합니다.</li>
           </ul>
 
           <p class="text-caption">
-            * 이 예측은 기술적 분석에 기반한 참고 자료이며, 실제 주가는 다양한 요인에 의해 변동될 수 있습니다.<br>
-            * 투자의 최종 판단은 투자자 본인의 책임하에 이루어져야 합니다.
+            * 각 지표는 서로 다른 기간의 데이터를 사용하여 계산되며, 종합적인 분석에 활용됩니다.<br>
+            * 투자 결정시에는 기본적 분석과 함께 고려하시기 바랍니다.
           </p>
         </v-card-text>
       </v-card>
