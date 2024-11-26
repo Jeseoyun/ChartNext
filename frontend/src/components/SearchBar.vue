@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { debounce } from 'lodash';
 import apiClient from '@/api';
 
@@ -61,6 +61,21 @@ const clearSearchResults = () => {
   normalSearchResults.value = [];
   mlSearchResults.value = [];
 };
+
+const handleClickOutside = (event) => {
+  const searchContainer = event.target.closest('.search-container');
+  if (!searchContainer) {
+    clearSearchResults();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <template>
@@ -142,6 +157,7 @@ const clearSearchResults = () => {
   background-color: rgba(0, 0, 0, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  margin-top: -38px; /* mb-4 상쇄를 위한 음수 마진 */
 }
 
 :deep(.search-field) {
