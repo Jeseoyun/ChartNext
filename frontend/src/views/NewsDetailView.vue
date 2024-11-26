@@ -137,7 +137,6 @@
             <div 
               class="comment-form"
               :class="{ 'not-logged-in': !isLoggedIn }"
-              @click="handleCommentBoxClick"
             >
               <div class="comment-input">
                 <v-text-field
@@ -147,7 +146,7 @@
                   hide-details
                   class="comment-field"
                   :readonly="!isLoggedIn"
-                  @click.stop="!isLoggedIn && router.push('/login')"
+                  @click="!isLoggedIn && router.push('/login')"
                 ></v-text-field>
                 <div v-if="isLoggedIn" class="comment-counter">{{ newComment.length }} / 400</div>
               </div>
@@ -166,6 +165,17 @@
                 >
                   등록
                 </v-btn>
+              </div>
+            </div>
+
+            <!-- 댓글 목록 -->
+            <div class="comments-list">
+              <div v-for="comment in comments" :key="comment.id" class="comment-item">
+                <div class="comment-header">
+                  <span class="comment-author">{{ comment.username }}</span>
+                  <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+                </div>
+                <div class="comment-text">{{ comment.text }}</div>
               </div>
             </div>
           </div>
@@ -222,8 +232,10 @@ import LogoComponent from '@/components/LogoComponent.vue';
 import NavBarComponent from '@/components/NavBarComponent.vue';
 import apiClient from '@/api';
 import { useRouter } from 'vue-router';  // router 추가
+import { useUserStore } from '@/stores/user';
 
-const router = useRouter();  // router 인스턴스 생성
+const router = useRouter();
+const userStore = useUserStore();
 
 const props = defineProps({
   id: {
@@ -246,7 +258,7 @@ const selectedCategory = ref('all');
 const isChatbotOpen = ref(false);
 const isLiked = ref(false);
 const likeCount = ref(0);
-const isLoggedIn = ref(false); // 로그인 상태 체크용
+const isLoggedIn = computed(() => userStore.isLoggedIn);
 
 // 유틸리티 함수들
 const formatDate = (dateString) => {
@@ -406,13 +418,38 @@ const handleLike = () => {
   likeCount.value += isLiked.value ? 1 : -1;
 };
 
-// 댓글 제출 처리 함수
-const handleSubmitComment = () => {
+// 댓글 관련 함수들
+const fetchComments = async () => {
+  try {
+    const response = await apiClient.get(`/news/${props.id}/comments/`);
+    comments.value = response.data;
+  } catch (error) {
+    console.error('댓글을 불러오는데 실패했습니다:', error);
+  }
+};
+
+const handleSubmitComment = async () => {
   if (!isLoggedIn.value) {
     router.push('/login');
     return;
   }
-  submitComment();
+  
+  if (!newComment.value.trim()) return;
+  
+  submittingComment.value = true;
+  try {
+    await apiClient.post(`/news/${props.id}/comments/create/`, {
+      text: newComment.value
+    });
+    
+    // 댓글 작성 후 목록 새로고침
+    await fetchComments();
+    newComment.value = '';
+  } catch (error) {
+    console.error('댓글 작성에 실패했습니다:', error);
+  } finally {
+    submittingComment.value = false;
+  }
 };
 
 // 카테고리 클릭 핸들러 수정
@@ -421,13 +458,6 @@ const handleCategoryClick = (category) => {
     router.push('/news');
   } else {
     router.push(`/news/category/${category.value}`);
-  }
-};
-
-// 댓글창 클릭 핸들러 추가
-const handleCommentBoxClick = () => {
-  if (!isLoggedIn.value) {
-    router.push('/login');
   }
 };
 
@@ -440,6 +470,7 @@ const goToNewsDetail = (article) => {
 
 onMounted(() => {
   fetchArticle();
+  fetchComments();  // 댓글 목록 불러오기 추가
   window.addEventListener('scroll', handleScroll);
 });
 
