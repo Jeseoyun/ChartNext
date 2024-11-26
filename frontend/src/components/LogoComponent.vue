@@ -5,11 +5,18 @@
 </template>
 
 <script>
+import { useUserStore } from '@/stores/user';
+
 export default {
   name: 'LogoComponent',
   methods: {
     goHome() {
-      this.$router.push({ name: 'Home' });
+      const userStore = useUserStore();
+      if (userStore.isLoggedIn) {
+        this.$router.push({ name: 'Main' });
+      } else {
+        this.$router.push({ name: 'Home' });
+      }
     },
   },
 };
