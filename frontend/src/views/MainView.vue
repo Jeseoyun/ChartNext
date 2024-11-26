@@ -183,8 +183,9 @@ onMounted(() => {
           </v-card>
 
           <v-card class="dashboard-card stock-card">
-            <v-card-title class="d-flex align-center justify-space-between">
-              <span>내 관심기업 주가</span>
+            <v-card-title>
+              내 관심기업 주가
+              <v-spacer></v-spacer>
               <v-btn
                 class="edit-interests-btn"
                 @click="editInterests"
@@ -396,6 +397,28 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 공통 스타일 */
+:deep(.v-card-title) {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  color: white;
+  font-size: 1.2rem;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  height: 72px;
+}
+
+.dashboard-card .v-card-title span,
+.dashboard-card .v-card-title {
+  font-weight: 700;
+}
+
+/* 불필요한 중복 CSS 제거 및 통합 */
+
+/* 나머지 스타일은 기존과 동일하게 유지 */
+
 .main {
   position: relative;
   width: 100vw;
@@ -440,14 +463,6 @@ onMounted(() => {
   border-radius: 8px;
   backdrop-filter: blur(10px);
   overflow: visible !important;
-}
-
-:deep(.v-card-title) {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
-  color: white;
-  font-size: 1.2rem;
-  padding: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 :deep(.v-card-text) {
@@ -498,25 +513,26 @@ onMounted(() => {
 
 .stock-list-container {
   flex: 1;
-  overflow-y: visible;
+  overflow-y: auto;
   margin-right: 2px;
+  padding-right: 4px;
 }
 
-.stock-list-container :deep(::-webkit-scrollbar) {
+.stock-list-container::-webkit-scrollbar {
   width: 8px;
 }
 
-.stock-list-container :deep(::-webkit-scrollbar-track) {
+.stock-list-container::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
-.stock-list-container :deep(::-webkit-scrollbar-thumb) {
+.stock-list-container::-webkit-scrollbar-thumb {
   background: rgba(147, 80, 255, 0.5);
   border-radius: 4px;
 }
 
-.stock-list-container :deep(::-webkit-scrollbar-thumb:hover) {
+.stock-list-container::-webkit-scrollbar-thumb:hover {
   background: rgba(147, 80, 255, 0.7);
 }
 
@@ -565,11 +581,6 @@ onMounted(() => {
   max-height: none !important;
 }
 
-:deep(.v-list) {
-  max-height: none !important;
-  overflow-y: visible;
-}
-
 .edit-interests-btn {
   font-family: 'AppleSDGothicNeoB', sans-serif !important;
   text-transform: none !important;
@@ -578,6 +589,7 @@ onMounted(() => {
   font-size: 1rem !important;
   padding: 0 20px !important;
   height: 40px !important;
+  margin-left: auto !important;
 }
 
 .edit-interests-btn:hover {
@@ -595,6 +607,7 @@ onMounted(() => {
   backdrop-filter: blur(8px);
   z-index: 1000;
 }
+
 
 .trending-news-item {
   padding: 16px;
@@ -695,6 +708,11 @@ onMounted(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .article-text {
@@ -872,7 +890,7 @@ onMounted(() => {
   white-space: pre-line;
 }
 
-/* 마크다운 스타일 */
+/* 마크다운 스일 */
 .topic-summary :deep(p) {
   margin-bottom: 1em;
 }
@@ -1052,7 +1070,7 @@ onMounted(() => {
   height: 400px !important;
 }
 
-/* 반응형 디자인 수정 */
+/* 응형 디자인 수정 */
 @media (max-width: 960px) {
   .news-content-wrapper {
     flex-direction: column;
@@ -1210,7 +1228,7 @@ onMounted(() => {
   cursor: grabbing;
 }
 
-/* 캐러셀 컨테이너에 대한 스타일 */
+/* 캐러셀 테이너에 대한 스타일 */
 .news-carousel :deep(.v-window__container) {
   pointer-events: auto;
   cursor: grab;
@@ -1220,7 +1238,7 @@ onMounted(() => {
   cursor: grabbing;
 }
 
-/* 캐러셀 아이템에 대한 스타일 */
+/* 캐러셀 이템에 대한 스타일 */
 .news-carousel :deep(.v-window-item) {
   pointer-events: none;
 }
@@ -1284,7 +1302,7 @@ onMounted(() => {
 
 /* 핫토픽 스타일 */
 .topic-title {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
   font-size: 1.4rem;
   color: white;
   margin-bottom: 16px;
@@ -1339,9 +1357,9 @@ onMounted(() => {
   font-family: 'AppleSDGothicNeoM', sans-serif;
 }
 
-/* 카드 제목 폰트 스타일 */
+/* 카드 제목 트 스일 */
 :deep(.v-card-title) {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoM', sans-serif;
   color: white;
   font-size: 1.2rem;
   padding: 16px;
@@ -1351,14 +1369,14 @@ onMounted(() => {
 /* 섹션 제목 스타일 */
 .section-title, 
 .dashboard-card .v-card-title {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoM', sans-serif;
   font-size: 1.2rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* 핫토픽 제목 */
 .topic-title {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
   font-size: 1.4rem;
   color: white;
   margin-bottom: 16px;
@@ -1367,20 +1385,20 @@ onMounted(() => {
 
 /* 기업명 */
 .company-name {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
   font-size: 1.1rem;
   color: #9350ff;
 }
 
-/* 주가 정보 */
+/* 주가 보 */
 :deep(.v-list-item-title) {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
-  color: white !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  color: white;
 }
 
 /* 뉴스 헤드라인 */
 .news-summary .headline {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
   font-size: 1.1rem;
   font-weight: 600;
   color: #9350ff;
@@ -1388,8 +1406,27 @@ onMounted(() => {
 
 /* 로딩 텍스트 */
 .loading-text {
-  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-family: 'AppleSDGothicNeoB', sans-serif;
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
+}
+
+.dashboard-card .v-card-title {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700; /* font-weight 값을 700으로 변경 */
+}
+
+/* 내 관심기업 주가 타이틀의 버튼 정렬을 위한 스타일 */
+.dashboard-card .v-card-title .edit-interests-btn {
+  margin: 0 !important;
+}
+
+.stock-card .v-card-title {
+  justify-content: space-between;
+}
+
+.edit-interests-btn {
+  margin-left: auto !important;
 }
 </style>
