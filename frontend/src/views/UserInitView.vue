@@ -362,7 +362,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
   border-radius: 12px;
   backdrop-filter: blur(10px);
 }

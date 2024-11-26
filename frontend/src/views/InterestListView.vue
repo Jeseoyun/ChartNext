@@ -246,7 +246,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
   border-radius: 12px;
   backdrop-filter: blur(10px);
 }
@@ -410,12 +410,14 @@ onMounted(() => {
   left: 0;
   width: 1920px;
   height: 80px;
-  background-color: transparent;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
+  backdrop-filter: blur(8px);
   z-index: 1000;
 }
 
 /* 컨텐츠 여백 조정 */
 .v-row {
   margin-top: 80px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 20px);
 }
 </style>
