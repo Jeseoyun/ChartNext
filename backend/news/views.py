@@ -209,10 +209,8 @@ def get_trending_company_news(request):
                     'count': mention_count,
                     'articles': list(recent_articles.values_list('id', flat=True))
                 })
-        print(company_mentions)
         # 언급 빈도순으로 정렬하여 상위 3개 기업 선택
         top_companies = sorted(company_mentions, key=lambda x: x['count'], reverse=True)[:3]
-        print(top_companies)
         
         results = []
         for company_data in top_companies:
