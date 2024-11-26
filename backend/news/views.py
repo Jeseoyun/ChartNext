@@ -190,7 +190,7 @@ def get_trending_company_news(request):
             return Response({'error': '등록된 관심 기업이 없습니다.'}, status=400)
         
         # 최근 10일간의 뉴스 조회
-        three_days_ago = datetime.now() - timedelta(days=5)
+        three_days_ago = datetime(2024, 11, 23) - timedelta(days=5)
         
         # 각 기업별로 뉴스 빈도수 계산
         company_mentions = []
@@ -253,6 +253,67 @@ def get_trending_company_news(request):
         
     except Exception as e:
         logger.error(f"관심 기업 뉴스 처리 중 오류 발생: {str(e)}")
+        return Response(
+            {'error': '처리 중 오류가 발생했습니다.', 'detail': str(e)},
+            status=500
+        )
+
+@api_view(['GET'])
+def get_hot_topics(request):
+    try:
+        # 최근 24시간 내의 뉴스 조회 후 랜덤으로 1500개 추출
+        one_day_ago = datetime(2023, 11, 23)  # 11월 23일 00:00
+        recent_articles = NewsArticle.objects.filter(
+            time__gte=one_day_ago
+        ).prefetch_related('contents').order_by('?')[:1000]  # 랜덤으로 1500개 선택
+        
+        # 모든 기사의 내용을 하나로 합치기
+        combined_content = ""
+        for article in recent_articles:
+            combined_content += f"{article.title}\n"
+        
+        # GPT를 통한 핫 토픽 추출
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": """
+                최근 24시간 동안의 주요 뉴스 1000개를 분석하여 가장 중요한 핫 토픽을 하나 추출해주세요.
+                토픽은 다음 형식으로 작성해주세요:
+                1. 제목: (핵심 내용을 한 줄로)
+                2. 요약: (주요 내용을 2-3문장으로)
+                3. 분야: (예: 경제, 정치, 기술 등)
+                """},
+                {"role": "user", "content": combined_content}
+            ],
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        topics = response.choices[0].message.content.split('\n\n')
+        formatted_topics = []
+        
+        for topic in topics:
+            if not topic.strip():
+                continue
+            
+            lines = topic.split('\n')
+            topic_dict = {}
+            
+            for line in lines:
+                if line.startswith('1. 제목:'):
+                    topic_dict['title'] = line.replace('1. 제목:', '').strip()
+                elif line.startswith('2. 요약:'):
+                    topic_dict['summary'] = line.replace('2. 요약:', '').strip()
+                elif line.startswith('3. 분야:'):
+                    topic_dict['category'] = line.replace('3. 분야:', '').strip()
+            
+            if topic_dict:
+                formatted_topics.append(topic_dict)
+        
+        return Response(formatted_topics)
+        
+    except Exception as e:
+        logger.error(f"핫 토픽 처리 중 오류 발생: {str(e)}")
         return Response(
             {'error': '처리 중 오류가 발생했습니다.', 'detail': str(e)},
             status=500
