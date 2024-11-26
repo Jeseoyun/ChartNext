@@ -5,6 +5,7 @@ import { useUserStore } from '@/stores/user';
 import apiClient from '@/api';
 import NavBarComponent from '@/components/NavBarComponent.vue';
 import LogoComponent from '@/components/LogoComponent.vue';
+import { marked } from 'marked';
 
 const router = useRouter();
 const userStocks = ref([]);
@@ -94,10 +95,7 @@ const loadTrendingNews = async () => {
 
 // 기사 상세 페이지로 이동하는 함수
 const goToNewsDetail = (articleId) => {
-  router.push({
-    name: 'NewsDetail',
-    params: { id: articleId }
-  });
+  router.push(`/news/${articleId}`);
 };
 
 // 핫 토픽 로드 함수
@@ -111,6 +109,23 @@ const loadHotTopics = async () => {
   } finally {
     isLoadingTopics.value = false;
   }
+};
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// 마크다운 포맷팅 함수 추가
+const formatMarkdown = (text) => {
+  if (!text) return '';
+  return marked(text);
 };
 
 onMounted(() => {
@@ -157,7 +172,7 @@ onMounted(() => {
                     </v-chip>
                   </div>
                   <h3 class="topic-title">{{ topic.title }}</h3>
-                  <p class="topic-summary">{{ topic.summary }}</p>
+                  <div class="topic-summary" v-html="formatMarkdown(topic.summary)"></div>
                 </div>
               </div>
               <div v-else class="no-topics">
@@ -261,48 +276,110 @@ onMounted(() => {
                 ></v-progress-circular>
                 <span class="loading-text">뉴스를 불러오는 중...</span>
               </div>
-              <v-list v-else-if="trendingNews.length > 0">
+              <v-list v-else-if="trendingNews.length > 0" class="news-list">
                 <div v-for="news in trendingNews" :key="news.company" class="trending-news-item">
-                  <div class="company-header">
-                    <h3 class="company-name">{{ news.company }}</h3>
-                    <v-chip
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      class="mention-count"
-                    >
-                      {{ news.mention_count }}건의 관련 기사
-                    </v-chip>
-                  </div>
-                  
-                  <div class="news-summary">
-                    <p class="headline">
-                      {{ 
-                        news.summary?.split('\n')?.[0]?.replace('1. 헤드라인: ', '') || 
-                        news.summary || 
-                        '제목 정보가 없습니다'
-                      }}
-                    </p>
-                    <p class="detail">
-                      {{ 
-                        news.summary?.split('\n\n')?.[1]?.replace('2. 상세 요약: ', '') || 
-                        (news.summary?.split('\n')?.[1] || '').replace('2. 상세 요약: ', '') || 
-                        '상세 내용이 없습니다'
-                      }}
-                    </p>
-                  </div>
+                  <div class="company-section">
+                    <div class="company-header">
+                      <h3 class="company-name">{{ news.company }}</h3>
+                      <v-chip
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        class="mention-count"
+                      >
+                        {{ news.mention_count }}건의 관련 기사
+                      </v-chip>
+                    </div>
+                    
+                    <div class="news-content-wrapper">
+                      <div class="news-summary">
+                        <p class="headline">
+                          {{ 
+                            news.summary?.split('\n')?.[0]?.replace('1. 헤드라인: ', '') || 
+                            news.summary || 
+                            '제목 정보가 없습니다'
+                          }}
+                        </p>
+                        <p class="detail">
+                          {{ 
+                            news.summary?.split('\n\n')?.[1]?.replace('2. 상세 요약: ', '') || 
+                            (news.summary?.split('\n')?.[1] || '').replace('2. 상세 요약: ', '') || 
+                            '상세 내용이 없습니다'
+                          }}
+                        </p>
+                      </div>
 
-                  <div class="article-links">
-                    <v-btn
-                      v-for="articleId in news.article_ids"
-                      :key="articleId"
-                      variant="text"
-                      density="compact"
-                      color="primary"
-                      @click="goToNewsDetail(articleId)"
-                    >
-                      기사 {{ news.article_ids.indexOf(articleId) + 1 }} 보기
-                    </v-btn>
+                      <div class="related-articles">
+                        <v-carousel
+                          v-if="news.articles.length > 0"
+                          :show-arrows="news.articles.length > 1"
+                          height="320"
+                          hide-delimiter-background
+                          delimiter-icon="mdi-circle"
+                          class="news-carousel"
+                          touch
+                          continuous
+                          draggable
+                        >
+                          <template v-slot:prev="{ props }">
+                            <v-btn
+                              variant="flat"
+                              class="carousel-nav-btn prev-btn"
+                              v-bind="props"
+                            >
+                              <v-icon>mdi-chevron-left</v-icon>
+                            </v-btn>
+                          </template>
+                          
+                          <template v-slot:next="{ props }">
+                            <v-btn
+                              variant="flat"
+                              class="carousel-nav-btn next-btn"
+                              v-bind="props"
+                            >
+                              <v-icon>mdi-chevron-right</v-icon>
+                            </v-btn>
+                          </template>
+
+                          <v-carousel-item
+                            v-for="article in news.articles"
+                            :key="article.id"
+                          >
+                            <v-card
+                              class="article-card mx-2"
+                              @click="goToNewsDetail(article.id)"
+                              elevation="0"
+                            >
+                              <div class="article-text">
+                                <v-card-text class="article-title">
+                                  {{ article.title }}
+                                </v-card-text>
+                                <v-card-subtitle class="article-time">
+                                  {{ formatDate(article.time) }}
+                                </v-card-subtitle>
+                              </div>
+                              <div class="article-image-container">
+                                <v-img
+                                  v-if="article.image_url"
+                                  :src="article.image_url"
+                                  height="220"
+                                  cover
+                                  class="article-image"
+                                >
+                                  <template v-slot:placeholder>
+                                    <v-img
+                                      src="@/assets/news_placeholder.jpg"
+                                      height="220"
+                                      cover
+                                    ></v-img>
+                                  </template>
+                                </v-img>
+                              </div>
+                            </v-card>
+                          </v-carousel-item>
+                        </v-carousel>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </v-list>
@@ -362,9 +439,11 @@ onMounted(() => {
   background-color: rgba(0, 0, 0, 0.5) !important;
   border-radius: 8px;
   backdrop-filter: blur(10px);
+  overflow: visible !important;
 }
 
 :deep(.v-card-title) {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
   color: white;
   font-size: 1.2rem;
   padding: 16px;
@@ -373,10 +452,13 @@ onMounted(() => {
 
 :deep(.v-card-text) {
   color: rgba(255, 255, 255, 0.8);
+  overflow: visible !important;
 }
 
 :deep(.v-list) {
   background-color: transparent !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 
 :deep(.v-list-item) {
@@ -391,7 +473,7 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* 반응형 디자인 */
+/* 응형 디자인 */
 @media (max-width: 960px) {
   .dashboard {
     grid-template-columns: 1fr;
@@ -416,7 +498,7 @@ onMounted(() => {
 
 .stock-list-container {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: visible;
   margin-right: 2px;
 }
 
@@ -517,6 +599,7 @@ onMounted(() => {
 .trending-news-item {
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 360px;
 }
 
 .trending-news-item:last-child {
@@ -528,6 +611,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+  height: 32px;
 }
 
 .company-name {
@@ -540,26 +624,183 @@ onMounted(() => {
   font-size: 0.8rem;
 }
 
+.news-content-wrapper {
+  display: flex;
+  gap: 24px;
+  height: 320px;
+  margin-top: 0;
+}
+
 .news-summary {
-  margin: 12px 0;
+  flex: 0 0 300px;
+  padding: 16px;
+  background: rgba(147, 80, 255, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(147, 80, 255, 0.2);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 40px;
 }
 
 .news-summary .headline {
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #9350ff;
+  line-height: 1.4;
 }
 
 .news-summary .detail {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.5;
+  white-space: pre-line;
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
-.article-links {
+.news-summary .detail::-webkit-scrollbar {
+  width: 4px;
+}
+
+.news-summary .detail::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.news-summary .detail::-webkit-scrollbar-thumb {
+  background: rgba(147, 80, 255, 0.3);
+  border-radius: 2px;
+}
+
+.news-summary .detail::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 80, 255, 0.5);
+}
+
+.related-articles {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.article-card {
+  height: 320px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0;
+  width: 100%;
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  flex-direction: column;
+}
+
+.article-text {
+  flex: 1;
+  padding: 16px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.article-title {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-height: 4.2em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: white;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.article-time {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0;
+  margin-top: auto;
+}
+
+.article-image-container {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  position: relative;
+}
+
+.article-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.news-carousel {
+  height: 320px !important;
+}
+
+/* 캐러셀 내부 여백 제거 */
+.news-carousel :deep(.v-window__container) {
+  height: 100%;
+}
+
+.news-carousel :deep(.v-window-item) {
+  padding: 0;
+}
+
+/* 반응형 디자인 수정 */
+@media (max-width: 960px) {
+  .news-content-wrapper {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .news-summary, 
+  .related-articles,
+  .article-card,
+  .news-carousel {
+    height: 260px !important;
+  }
+
+  .article-text {
+    min-height: 100px;
+  }
+
+  .article-image-container {
+    height: 120px;
+  }
+}
+
+@media (max-width: 600px) {
+  .news-summary, 
+  .related-articles,
+  .article-card,
+  .news-carousel {
+    height: 240px !important;
+  }
+
+  .article-title {
+    font-size: 0.9rem;
+  }
+
+  .article-text {
+    padding: 12px;
+    min-height: 90px;
+  }
+
+  .article-image-container {
+    height: 110px;
+  }
 }
 
 .no-news {
@@ -587,9 +828,9 @@ onMounted(() => {
 }
 
 .loading-text {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
-  font-family: 'AppleSDGothicNeoB', sans-serif;
 }
 
 .hot-topics {
@@ -600,7 +841,7 @@ onMounted(() => {
 
 .topic-item {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 20px;
   height: 100%;
 }
@@ -617,16 +858,52 @@ onMounted(() => {
 }
 
 .topic-title {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   color: white;
-  margin-bottom: 12px;
-  font-weight: 500;
+  margin-bottom: 16px;
+  font-weight: 600;
 }
 
 .topic-summary {
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.6;
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+/* 마크다운 스타일 */
+.topic-summary :deep(p) {
+  margin-bottom: 1em;
+}
+
+.topic-summary :deep(strong) {
+  color: #9350ff;
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+.topic-summary :deep(ul), 
+.topic-summary :deep(ol) {
+  padding-left: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+.topic-summary :deep(li) {
+  margin-bottom: 0.8em;
+  font-size: 1.1rem;
+}
+
+.topic-summary :deep(em) {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.topic-summary :deep(code) {
+  background: rgba(147, 80, 255, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 .no-topics {
@@ -645,5 +922,474 @@ onMounted(() => {
 
 .hot-topics-card {
   grid-column: span 2;
+}
+
+.related-articles {
+  margin-top: 16px;
+}
+
+.news-carousel {
+  background: transparent;
+  position: relative;
+}
+
+.carousel-nav-btn {
+  position: absolute;
+  bottom: 40px;
+  z-index: 10;
+  background: rgba(147, 80, 255, 0.3) !important;
+  border: 2px solid rgba(147, 80, 255, 0.5) !important;
+  height: 36px !important;
+  width: 36px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(147, 80, 255, 0.2);
+  pointer-events: auto !important;
+}
+
+.carousel-nav-btn:hover {
+  background: rgba(147, 80, 255, 0.5) !important;
+  border-color: rgba(147, 80, 255, 0.8) !important;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(147, 80, 255, 0.4);
+}
+
+.prev-btn {
+  left: 12px;
+}
+
+.next-btn {
+  right: 12px;
+}
+
+.carousel-nav-btn .v-icon {
+  color: rgba(255, 255, 255, 1);
+  font-size: 24px;
+}
+
+.news-carousel :deep(.v-carousel__controls) {
+  background: none;
+  margin-bottom: 8px;
+}
+
+.news-carousel :deep(.v-carousel__controls__item) {
+  margin: 0 2px;
+}
+
+.news-carousel :deep(.v-carousel__controls__item .v-btn--icon) {
+  color: rgba(255, 255, 255, 0.5);
+  transform: scale(0.7);
+}
+
+.news-carousel :deep(.v-carousel__controls__item .v-btn--active) {
+  color: rgba(147, 80, 255, 0.9) !important;
+  transform: scale(0.8);
+}
+
+.article-card {
+  height: 360px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 auto;
+  max-width: 95%;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.article-content {
+  flex: 1;
+  padding: 20px;
+}
+
+.article-text {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.article-title {
+  font-size: 1.2rem;
+  line-height: 1.5;
+  max-height: 4.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: white;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.article-time {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0;
+  margin-top: auto;
+}
+
+.article-image-container {
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+}
+
+.article-image {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.news-carousel {
+  height: 400px !important;
+}
+
+/* 반응형 디자인 수정 */
+@media (max-width: 960px) {
+  .news-content-wrapper {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .news-summary {
+    width: 100%;
+  }
+
+  .article-card {
+    height: 340px;
+  }
+
+  .article-image-container {
+    height: 200px;
+  }
+}
+
+@media (max-width: 600px) {
+  .article-card {
+    height: 320px;
+  }
+
+  .article-title {
+    font-size: 1.1rem;
+  }
+
+  .article-image-container {
+    height: 180px;
+  }
+}
+
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0;
+  margin: 0;
+}
+
+.trending-news-item {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 0 20px 20px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.company-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  height: 32px;
+  padding-top: 20px;
+}
+
+.company-name {
+  font-size: 1.1rem;
+  color: #9350ff;
+  margin: 0;
+}
+
+.mention-count {
+  font-size: 0.8rem;
+}
+
+.news-content-wrapper {
+  display: flex;
+  gap: 24px;
+  height: 280px;
+}
+
+.news-summary {
+  flex: 0 0 300px;
+  padding: 16px;
+  background: rgba(147, 80, 255, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(147, 80, 255, 0.2);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+}
+
+.news-summary .headline {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #9350ff;
+  line-height: 1.4;
+}
+
+.news-summary .detail {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  white-space: pre-line;
+  flex-grow: 1;
+}
+
+.related-articles {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.article-card {
+  height: 280px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.news-carousel {
+  height: 280px !important;
+}
+
+:deep(.v-card-text) {
+  padding-top: 0 !important;
+}
+
+.news-carousel :deep(.v-window__container) {
+  cursor: grab;
+}
+
+.news-carousel :deep(.v-window__container:active) {
+  cursor: grabbing;
+}
+
+.article-card {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.news-carousel {
+  cursor: grab;
+}
+
+.news-carousel:active {
+  cursor: grabbing;
+}
+
+/* 캐러셀 컨테이너에 대한 스타일 */
+.news-carousel :deep(.v-window__container) {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.news-carousel :deep(.v-window__container:active) {
+  cursor: grabbing;
+}
+
+/* 캐러셀 아이템에 대한 스타일 */
+.news-carousel :deep(.v-window-item) {
+  pointer-events: none;
+}
+
+/* 클릭 이벤트를 위한 예외 처리 */
+.article-card {
+  pointer-events: auto !important;
+}
+
+.news-carousel :deep(.v-window__container) {
+  pointer-events: auto;
+}
+
+.news-carousel :deep(.v-window-item) {
+  pointer-events: auto;
+}
+
+.article-card {
+  pointer-events: auto !important;
+}
+
+.article-image {
+  pointer-events: none;
+}
+
+/* 주식 관련 텍스트 스타일 */
+.stock-name {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 1rem;
+}
+
+.stock-price {
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  font-size: 1.1rem;
+}
+
+.stock-change {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 0.9rem;
+}
+
+/* 섹션 제목 스타일 */
+.section-title {
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  font-size: 1.4rem;
+  margin-bottom: 16px;
+}
+
+/* 기사 카드 스타일 */
+.article-title {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.article-time {
+  font-family: 'AppleSDGothicNeoL', sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 핫토픽 스타일 */
+.topic-title {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-size: 1.4rem;
+  color: white;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.topic-summary {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.topic-category {
+  font-family: 'AppleSDGothicNeoL', sans-serif;
+  font-size: 0.9rem;
+}
+
+/* 트렌딩 뉴스 스타일 */
+.company-name {
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  font-size: 1.1rem;
+  color: #9350ff;
+}
+
+.mention-count {
+  font-family: 'AppleSDGothicNeoL', sans-serif;
+  font-size: 0.8rem;
+}
+
+.news-summary .headline {
+  font-family: 'AppleSDGothicNeoB', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #9350ff;
+}
+
+.news-summary .detail {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* 버튼 스타일 */
+.edit-interests-btn {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+}
+
+/* 상승/하락 텍스트 */
+.rising-text, .falling-text {
+  font-family: 'AppleSDGothicNeoM', sans-serif;
+}
+
+/* 카드 제목 폰트 스타일 */
+:deep(.v-card-title) {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  color: white;
+  font-size: 1.2rem;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 섹션 제목 스타일 */
+.section-title, 
+.dashboard-card .v-card-title {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* 핫토픽 제목 */
+.topic-title {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-size: 1.4rem;
+  color: white;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+/* 기업명 */
+.company-name {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-size: 1.1rem;
+  color: #9350ff;
+}
+
+/* 주가 정보 */
+:deep(.v-list-item-title) {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  color: white !important;
+}
+
+/* 뉴스 헤드라인 */
+.news-summary .headline {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #9350ff;
+}
+
+/* 로딩 텍스트 */
+.loading-text {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
 }
 </style>
