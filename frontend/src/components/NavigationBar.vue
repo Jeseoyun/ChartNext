@@ -24,10 +24,7 @@ const handleLogout = async () => {
   <div class="header">
     <img src="@/assets/logo.png" alt="Logo" class="logo" @click="refreshMain" />
     <div class="header-right">
-      <button class="edit-interests" @click="editInterests">
-        <v-icon>mdi-pencil</v-icon>
-        관심 기업 수정
-      </button>
+
       <nav class="navbar">
         <button @click="goStocks">종목</button>
         <button @click="goNews">뉴스</button>

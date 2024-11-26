@@ -66,6 +66,8 @@ const fallingStocks = computed(() =>
     )
 );
 
+const editInterests = () => router.push({ name: 'Interests' });
+
 onMounted(() => {
   loadUserStocks();
 });
@@ -104,7 +106,19 @@ onMounted(() => {
           </v-card>
 
           <v-card class="dashboard-card stock-card">
-            <v-card-title>내 관심기업 주가</v-card-title>
+            <v-card-title class="d-flex align-center justify-space-between">
+              <span>내 관심기업 주가</span>
+              <v-btn
+                class="edit-interests-btn"
+                @click="editInterests"
+                prepend-icon="mdi-pencil"
+                variant="outlined"
+                color="white"
+                size="default"
+              >
+                관심 기업 수정
+              </v-btn>
+            </v-card-title>
             <v-card-text>
               <div class="stock-section">
                 <div class="stock-category" v-if="risingStocks.length > 0">
@@ -350,5 +364,20 @@ onMounted(() => {
 :deep(.v-list) {
   max-height: none !important;
   overflow-y: visible;
+}
+
+.edit-interests-btn {
+  font-family: 'AppleSDGothicNeoB', sans-serif !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  font-size: 1rem !important;
+  padding: 0 20px !important;
+  height: 40px !important;
+}
+
+.edit-interests-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: #9350ff !important;
 }
 </style>
