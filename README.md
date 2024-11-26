@@ -144,7 +144,21 @@ hdfs dfs -chmod -R 777 /news_data
 http://localhost:9870
 ```
 
-### 3. django 프로젝트 실행
+### 3. 주식데이터 PostgreSQL DB에 삽입
+```bash
+cd scripts
+```
+
+```bash 
+psql -U [username] -d [database_name] -f [backup_file].sql
+```
+
+```bash
+psql -U chart_next_user -d chart_next -f stocks_stock.sql
+```
+>failed: FATAL:  Peer authentication failed for user "postgres" 오류 발생시 트러블 슈팅 참고
+
+### 4. django 프로젝트 실행
 ```bash
 cd backend
 poetry install
@@ -154,7 +168,7 @@ python manage.py runserver
 ```
 > poetry install에서 오류날 경우 트러블 슈팅 참고
 
-### 4. vue 프로젝트 실행 
+### 5. vue 프로젝트 실행 
 > (새로운 터미널 창에서 진행)
 ```bash
 cd frontend
@@ -336,6 +350,34 @@ jps
 - NameNode
 - DataNode
 - SecondaryNameNode
+
+### 3. Peer authentication failed for user "postgres"
+PostgreSQL의 peer 인증 방식 때문에 발생하는 오류.
+WSL 환경에서 다음과 같이 해결 가능
+
+```bash
+sudo nano /etc/postgresql/[버전]/main/pg_hba.conf
+```
+```bash
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+```
+
+파일에서 다음과 같은 줄들을 찾음
+```bash
+local   all             postgres                                peer
+local   all             all                                     peer
+```
+
+이것들을 다음과 같이 변경
+```bash
+local   all             postgres                                md5
+local   all             all                                     md5
+```
+
+3. PostgreSQL 재시작
+```bash
+sudo service postgresql restart
+```
 
 </div>
 </details>
