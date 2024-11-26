@@ -7,4 +7,5 @@ urlpatterns = [
     path('news/<int:article_id>/chatbot/', views.article_chatbot, name='article-chatbot'),
     path('news/<int:article_id>/comments/', views.get_comments, name='get-comments'),
     path('news/<int:article_id>/comments/create/', views.create_comment, name='create-comment'),
+    path('news/trending/', views.get_trending_company_news, name='trending-company-news'),
 ] 

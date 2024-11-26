@@ -8,6 +8,10 @@ from django.db.models import Prefetch, Q
 import logging
 from django.conf import settings
 from openai import OpenAI
+from datetime import datetime, timedelta
+from django.db.models import Count
+from django.contrib.auth.decorators import login_required
+from users.models import UserStock  # 사용자의 관심 기업 모델 import 필요
 
 # Create your views here.
 
@@ -172,5 +176,86 @@ def article_chatbot(request, article_id):
         logger.error(f"챗봇 처리 중 오류 발생: {str(e)}")
         return Response(
             {'error': '서버 오류가 발생했습니다.', 'detail': str(e)}, 
+            status=500
+        )
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])  # 로그인 필요
+def get_trending_company_news(request):
+    try:
+        # 사용자의 관심 기업 목록 조회
+        user_companies = UserStock.objects.filter(user=request.user).values_list('stock__name', flat=True)
+        
+        if not user_companies:
+            return Response({'error': '등록된 관심 기업이 없습니다.'}, status=400)
+        
+        # 최근 10일간의 뉴스 조회
+        three_days_ago = datetime.now() - timedelta(days=5)
+        
+        # 각 기업별로 뉴스 빈도수 계산
+        company_mentions = []
+        for company in user_companies:
+            # 기업 이름으로 뉴스 검색
+            recent_articles = NewsArticle.objects.filter(
+                Q(title__icontains=company) |
+                Q(contents__text__icontains=company),
+                time__gte=three_days_ago
+            ).distinct()
+            
+            mention_count = recent_articles.count()
+            if mention_count > 0:
+                company_mentions.append({
+                    'company': company,
+                    'count': mention_count,
+                    'articles': list(recent_articles.values_list('id', flat=True))
+                })
+        print(company_mentions)
+        # 언급 빈도순으로 정렬하여 상위 3개 기업 선택
+        top_companies = sorted(company_mentions, key=lambda x: x['count'], reverse=True)[:3]
+        print(top_companies)
+        
+        results = []
+        for company_data in top_companies:
+            company = company_data['company']
+            articles = NewsArticle.objects.filter(id__in=company_data['articles'])
+            
+            # 뉴스 내용 통합
+            combined_content = f"{company} 관련 최근 뉴스 요약:\n"
+            for article in articles:
+                combined_content += f"제목: {article.title}\n"
+                for content in article.contents.all():
+                    combined_content += f"{content.text}\n"
+            
+            # GPT를 통한 요약 생성
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": f"""
+                    {company} 관련 뉴스를 다음 형식으로 요약해주세요:
+                    1. 헤드라인: 가장 중요한 소식을 한 줄로
+                    2. 상세 요약: 주요 내용을 3-4문장으로
+                    한국어로 작성해주세요.
+                    """},
+                    {"role": "user", "content": combined_content}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+            
+            summary = response.choices[0].message.content
+            
+            results.append({
+                'company': company,
+                'mention_count': company_data['count'],
+                'summary': summary,
+                'article_ids': company_data['articles'][:3]
+            })
+        
+        return Response(results)
+        
+    except Exception as e:
+        logger.error(f"관심 기업 뉴스 처리 중 오류 발생: {str(e)}")
+        return Response(
+            {'error': '처리 중 오류가 발생했습니다.', 'detail': str(e)},
             status=500
         )
