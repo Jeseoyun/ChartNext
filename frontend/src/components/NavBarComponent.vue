@@ -23,7 +23,7 @@ export default {
   },
   methods: {
     goStocks() {
-      this.$router.push({ name: 'Interests' });
+      this.$router.push({ name: 'StockDetail' });
     },
     goNews() {
       this.$router.push({ 
