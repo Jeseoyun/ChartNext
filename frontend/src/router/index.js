@@ -8,6 +8,7 @@ import NewsListView from '@/views/NewsListView.vue'
 import InterestListView from '@/views/InterestListView.vue'
 import InterestDetailView from '@/views/InterestDetailView.vue'
 import UserInitView from '@/views/UserInitView.vue'
+import NewsDetailView from '@/views/NewsDetailView.vue'
 import StockDetailView from '@/views/StockDetailView.vue'
 
 const router = createRouter({
@@ -44,6 +45,17 @@ const router = createRouter({
       component: NewsListView
     },
     {
+      path: '/news/category/:category',
+      name: 'NewsByCategory',
+      component: NewsListView
+    },
+    {
+      path: '/news/:id(\\d+)',
+      name: 'NewsDetail',
+      component: NewsDetailView,
+      props: true
+    },
+    {
       path: '/interests',
       name: 'Interests',
       component: InterestListView
@@ -58,6 +70,12 @@ const router = createRouter({
       path: '/user-init',
       name: 'UserInit',
       component: UserInitView
+    },
+    {
+      path: '/news/:id',
+      name: 'NewsDetail',
+      component: NewsDetailView,
+      props: true
     },
     {
       path: '/stock',

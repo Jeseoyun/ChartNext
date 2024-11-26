@@ -115,11 +115,25 @@ sudo -u postgres psql -c "ALTER ROLE chart_next_user SET default_transaction_iso
 sudo -u postgres psql -c "ALTER ROLE chart_next_user SET timezone TO 'UTC';"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;"
 
+# Spark 설치 후에 추가
+echo "PostgreSQL JDBC 드라이버 설치 중..."
+mkdir -p /usr/local/spark/jars
+curl -L -o /usr/local/spark/jars/postgresql-42.7.3.jar https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
+sudo chmod 644 /usr/local/spark/jars/postgresql-42.7.3.jar
+
+# 권한 설정
+sudo chown -R $USER:$USER /usr/local/spark/jars
+sudo chmod 644 /usr/local/spark/jars/postgresql-42.7.3.jar
+
 # 변경 사항 적용
 source ~/.bashrc
 
 echo "설치가 완료되었습니다."
 echo "다음 단계를 순서대로 진행하세요:"
+echo ""
+echo "cd backend"
+echo "poetry install"
+echo "poetry shell"
 echo ""
 echo "1. HDFS 초기화:"
 echo "   hdfs namenode -format"
@@ -135,8 +149,8 @@ echo "   - SecondaryNameNode"
 echo ""
 echo "4. HDFS 디렉토리 구조 생성:"
 echo "   hdfs dfs -mkdir -p /news_data/raw"
-echo "   hdfs dfs -mkdir -p /news_data/stream"
-echo "   hdfs dfs -chmod -R 777 /news_data"
+echo "   hdfs dfs -chmod -R 777 /news_data
 echo ""
 echo "5. HDFS 웹 UI 확인:"
 echo "   http://localhost:9870"
+

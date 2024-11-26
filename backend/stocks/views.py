@@ -119,3 +119,19 @@ def ml_search_stocks(request):
         })
 
     return JsonResponse({'results': results})
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def delete_user_stock(request, stock_code):
+    try:
+        user_stock = UserStock.objects.get(
+            user=request.user,
+            stock__code=stock_code
+        )
+        user_stock.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except UserStock.DoesNotExist:
+        return Response(
+            {"error": "관심 종목을 찾을 수 없습니다."}, 
+            status=status.HTTP_404_NOT_FOUND
+        )

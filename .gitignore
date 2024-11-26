@@ -8,6 +8,9 @@ venv/
 # Created by https://www.toptal.com/developers/gitignore/api/django,python,visualstudiocode,vue,vuejs
 # Edit at https://www.toptal.com/developers/gitignore?templates=django,python,visualstudiocode,vue,vuejs
 
+# ai 모델
+*.safetensors
+
 ### Django ###
 *.log
 *.pot

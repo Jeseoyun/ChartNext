@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import get_stock_info, get_all_stocks, search_stocks, ml_search_stocks, user_stocks
+from .views import get_stock_info, get_all_stocks, search_stocks, ml_search_stocks, user_stocks, delete_user_stock
 
 urlpatterns = [
     path('stock/<str:code>/', get_stock_info, name='get-stock-info'),
@@ -7,4 +7,5 @@ urlpatterns = [
     path('stocks/search/', search_stocks, name='search-stocks'),
     path('stocks/ml-search/', ml_search_stocks, name='ml-search-stocks'),
     path('user-stocks/', user_stocks, name='user-stocks'),
+    path('user-stocks/<str:stock_code>/', delete_user_stock, name='delete-user-stock'),
 ] 

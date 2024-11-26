@@ -4,7 +4,7 @@ import apiClient from '@/api';
 export const useUserStore = defineStore('user', {
   state: () => ({
     user: null,
-    token: null,
+    token: localStorage.getItem('token') || null,
   }),
   actions: {
     async login(username, password) {
@@ -14,6 +14,7 @@ export const useUserStore = defineStore('user', {
           password,
         });
         this.token = response.data.key;
+        localStorage.setItem('token', this.token);
         apiClient.defaults.headers.common['Authorization'] = `Token ${this.token}`;
         // 사용자 정보 가져오기 등 추가 작업
       } catch (error) {
@@ -24,7 +25,11 @@ export const useUserStore = defineStore('user', {
     logout() {
       this.user = null;
       this.token = null;
+      localStorage.removeItem('token');
       delete apiClient.defaults.headers.common['Authorization'];
     },
+  },
+  getters: {
+    isLoggedIn: (state) => !!state.token,
   },
 }); 

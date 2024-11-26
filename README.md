@@ -102,13 +102,63 @@ git push
 <summary>접기/펼치기</summary>
 <div markdown="1">
 
-### 설치 스크립트 실행
+### 1. 설치 스크립트 실행
 ```bash
 cd scripts
 ./install.sh
 ```
 
-### django 프로젝트 실행
+### 2. HDFS 설정
+```bash
+cd backend
+poetry install
+poetry shell
+```
+
+```bash
+# 1. HDFS 초기화
+hdfs namenode -format
+```
+
+```bash
+# 2. HDFS 시작
+start-dfs.sh
+```
+
+```bash
+# 3. HDFS 실행 확인 (다음 프로세스들이 보여야 함)
+jps
+```
+- NameNode
+- DataNode
+- SecondaryNameNode
+
+```bash
+# 4. HDFS 디렉토리 구조 생성:
+hdfs dfs -mkdir -p /news_data/raw
+hdfs dfs -chmod -R 777 /news_data
+```
+
+```bash
+# 5. HDFS 웹 UI 확인:
+http://localhost:9870
+```
+
+### 3. 주식데이터 PostgreSQL DB에 삽입
+```bash
+cd scripts
+```
+
+```bash 
+psql -U [username] -d [database_name] -f [backup_file].sql
+```
+
+```bash
+psql -U chart_next_user -d chart_next -f stocks_stock.sql
+```
+>failed: FATAL:  Peer authentication failed for user "postgres" 오류 발생시 트러블 슈팅 참고
+
+### 4. django 프로젝트 실행
 ```bash
 cd backend
 poetry install
@@ -116,15 +166,96 @@ poetry shell
 python manage.py migrate
 python manage.py runserver
 ```
-poetry install에서 오류날 경우 트러블 슈팅 참고
+> poetry install에서 오류날 경우 트러블 슈팅 참고
 
-### vue 프로젝트 실행 
+### 5. vue 프로젝트 실행 
 > (새로운 터미널 창에서 진행)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+<br />
+
+### (기타)PostgreSQL 접속 필요시
+```bash
+# PostgreSQL 접속
+sudo -u postgres psql
+
+# 데이터베이스 목록 확인
+\l
+
+# chart_next 데이터베이스로 전환
+\c chart_next
+
+# SQL문 실행 (예시: 테이블 삭제)
+DROP TABLE IF EXISTS news_newsarticle CASCADE;
+DROP TABLE IF EXISTS news_newsimage CASCADE;
+DROP TABLE IF EXISTS news_newscontent CASCADE;
+
+# 마이그레이션 기록 삭제
+DELETE FROM django_migrations WHERE app = 'news';
+
+# PostgreSQL 종료
+\q
+```
+
+### (기타) PostgreSQL 데이터베이스 재생성
+```bash
+# PostgreSQL 접속
+sudo -u postgres psql
+
+# 기존 연결 종료
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+FROM pg_stat_activity
+WHERE pg_stat_activity.datname = 'chart_next'
+AND pid <> pg_backend_pid();
+
+# 데이터베이스 삭제
+DROP DATABASE chart_next;
+
+# 데이터베이스 다시 생성
+CREATE DATABASE chart_next;
+
+# 권한 부여
+GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;
+
+# PostgreSQL 종료
+\q
+
+# Django 마이그레이션 초기화 및 재적용
+cd backend
+python manage.py migrate
+```
+
+### (기타) 크롤링 한 파일 내용 보기
+```bash
+hdfs dfs -cat /news_data/raw/articles.json
+```
+
+### (기타) 크롤링 한 파일을 로컬로 복사하기
+```bash
+hdfs dfs -get /news_data/raw/articles.json ./articles.json
+```
+
+### (기타) Spark로 HDFS에 있는 크롤링 파일을 PostgreSQL에 로드하기
+> backend 디렉토리에서
+```bash
+spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar news_crawling/spark/load_to_postgres.py
+```
+  > 또는 프로젝트 루트 디렉토리에서
+```bash
+spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar backend/news_crawling/spark/load_to_postgres.py
+```
+
+
+### (기타) 로컬에 있는 크롤링 파일을 HDFS에 복사하기
+```bash
+hdfs dfs -put articles.json /news_data/raw/
+```
+
+
 
 </div>
 </details>
@@ -219,6 +350,34 @@ jps
 - NameNode
 - DataNode
 - SecondaryNameNode
+
+### 3. Peer authentication failed for user "postgres"
+PostgreSQL의 peer 인증 방식 때문에 발생하는 오류.
+WSL 환경에서 다음과 같이 해결 가능
+
+```bash
+sudo nano /etc/postgresql/[버전]/main/pg_hba.conf
+```
+```bash
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+```
+
+파일에서 다음과 같은 줄들을 찾음
+```bash
+local   all             postgres                                peer
+local   all             all                                     peer
+```
+
+이것들을 다음과 같이 변경
+```bash
+local   all             postgres                                md5
+local   all             all                                     md5
+```
+
+3. PostgreSQL 재시작
+```bash
+sudo service postgresql restart
+```
 
 </div>
 </details>

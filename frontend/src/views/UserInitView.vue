@@ -1,43 +1,137 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import apiClient from '@/api';
+import SearchBar from '@/components/SearchBar.vue';
+
+const router = useRouter();
+const stocks = ref([]);
+const selectedDomestic = ref([]);
+const selectedInternational = ref([]);
+
+const domesticStocks = computed(() => 
+  stocks.value.filter(stock => stock.market === 'Domestic').slice(0, 100)
+);
+
+const internationalStocks = computed(() => 
+  stocks.value.filter(stock => stock.market === 'International').slice(0, 100)
+);
+
+const selectedStocks = computed(() => [
+  ...selectedDomestic.value,
+  ...selectedInternational.value
+]);
+
+const isSelected = (stock) => {
+  return selectedStocks.value.some(s => s.code === stock.code);
+};
+
+const toggleStock = (stock, type) => {
+  const selectedArray = type === 'Domestic' ? selectedDomestic : selectedInternational;
+  const index = selectedArray.value.findIndex(s => s.code === stock.code);
+  
+  if (index === -1) {
+    selectedArray.value.push(stock);
+  } else {
+    selectedArray.value.splice(index, 1);
+  }
+};
+
+const removeStock = (stock) => {
+  const domesticIndex = selectedDomestic.value.findIndex(s => s.code === stock.code);
+  if (domesticIndex !== -1) {
+    selectedDomestic.value.splice(domesticIndex, 1);
+    return;
+  }
+  
+  const internationalIndex = selectedInternational.value.findIndex(s => s.code === stock.code);
+  if (internationalIndex !== -1) {
+    selectedInternational.value.splice(internationalIndex, 1);
+  }
+};
+
+const fetchStocks = async () => {
+  try {
+    const response = await apiClient.get('/stocks/stocks/');
+    stocks.value = response.data;
+  } catch (error) {
+    console.error('주식 데이터 로드 실패:', error);
+    if (error.response?.status === 401) {
+      router.push({ name: 'Login' });
+    }
+  }
+};
+
+const handleSubmit = async () => {
+  try {
+    // 선택된 주식들을 user_stock 테이블에 저장
+    const promises = selectedStocks.value.map(stock => 
+      apiClient.post('/stocks/user-stocks/', {
+        stock_code: stock.code
+      })
+    );
+    
+    await Promise.all(promises);
+    router.push({ name: 'Main' });
+  } catch (error) {
+    console.error('관심 기업 등록 실패:', error);
+    if (error.response?.status === 401) {
+      router.push({ name: 'Login' });
+    }
+  }
+};
+
+const handleSearchResultClick = (stock) => {
+  const type = stock.market === 'Domestic' ? 'domestic' : 'international';
+  toggleStock(stock, type);
+};
+
+onMounted(() => {
+  fetchStocks();
+});
+</script>
+
 <template>
   <v-container fluid class="fill-height">
     <v-row align="center" justify="center">
       <v-col cols="12" sm="10" md="8">
         <div class="text-center mb-6">
-          <h1 class="text-h4 mb-2">관심 기업 등록</h1>
-          <p class="text-subtitle-1">투자에 관심있는 기업을 3개 이상 선택해주세요</p>
+          <h1 class="text-h4 font-weight-bold mb-2">관심 기업 등록</h1>
+          <p class="text-subtitle-1 text-medium-emphasis">투자에 관심있는 기업을 3개 이상 선택해주세요</p>
           <p class="text-caption">선택된 기업: {{ selectedStocks.length }}개</p>
         </div>
 
         <v-row>
-          <!-- 주식 선택 영역 -->
           <v-col cols="12">
-            <!-- 검색창을 SearchBar 컴포넌트로 교체 -->
+            <!-- 검색창 -->
             <search-bar
+              class="mb-6"
               @result-selected="handleSearchResultClick"
               :selected-stocks="selectedStocks"
               :hide-selected="true"
             />
 
-            <!-- 선택된 기업 목록 -->
-            <v-row>
+            <!-- 선택된 기업 목록을 카드 형태로 변경 -->
+            <v-row class="mb-6">
               <v-col cols="12">
-                <v-list class="selected-stocks-list">
-                  <v-list-item
+                <div class="selected-stocks-grid">
+                  <div
                     v-for="stock in selectedStocks"
                     :key="stock.code"
-                    :title="`${stock.name} (${stock.code})`"
-                    :subtitle="stock.category"
+                    class="selected-stock-chip"
                   >
-                    <template v-slot:append>
-                      <v-btn
-                        icon="mdi-close"
-                        size="xx-small"
-                        @click="removeStock(stock)"
-                        color="grey"
-                      ></v-btn>
-                    </template>
-                  </v-list-item>
-                </v-list>
+                    <span class="stock-name">{{ stock.name }}</span>
+                    <span class="stock-code">({{ stock.code }})</span>
+                    <v-btn
+                      icon="mdi-close"
+                      size="x-small"
+                      color="white"
+                      variant="text"
+                      density="compact"
+                      @click="removeStock(stock)"
+                    ></v-btn>
+                  </div>
+                </div>
               </v-col>
             </v-row>
 
@@ -45,19 +139,31 @@
               <!-- 국내 주식 섹션 -->
               <v-col cols="12" md="6">
                 <v-card>
-                  <v-card-title class="text-center">국내 주식 Top 100</v-card-title>
+                  <v-card-title class="text-center py-4">
+                    <v-icon icon="mdi-flag" class="mr-2"></v-icon>
+                    국내 주식 Top 100
+                  </v-card-title>
                   <v-card-text>
                     <v-list class="scrollable-list">
                       <v-list-item
                         v-for="(stock, index) in domesticStocks"
                         :key="stock.code"
                         :value="stock"
-                        :title="`${index + 1}. ${stock.name} (${stock.code})`"
+                        :title="`${stock.name} (${stock.code})`"
                         :subtitle="stock.category"
                         @click="toggleStock(stock, 'domestic')"
                         :class="{ 'selected-item': isSelected(stock) }"
                         hover
                       >
+                        <template v-slot:prepend>
+                          <v-avatar
+                            :color="isSelected(stock) ? 'primary' : 'grey'"
+                            size="32"
+                            class="mr-3"
+                          >
+                            {{ index + 1 }}
+                          </v-avatar>
+                        </template>
                       </v-list-item>
                     </v-list>
                   </v-card-text>
@@ -67,160 +173,57 @@
               <!-- 해외 주식 섹션 -->
               <v-col cols="12" md="6">
                 <v-card>
-                  <v-card-title class="text-center">해외 주식 Top 100</v-card-title>
+                  <v-card-title class="text-center py-4">
+                    <v-icon icon="mdi-earth" class="mr-2"></v-icon>
+                    해외 주식 Top 100
+                  </v-card-title>
                   <v-card-text>
                     <v-list class="scrollable-list">
                       <v-list-item
                         v-for="(stock, index) in internationalStocks"
                         :key="stock.code"
                         :value="stock"
-                        :title="`${index + 1}. ${stock.name} (${stock.code})`"
+                        :title="`${stock.name} (${stock.code})`"
                         :subtitle="stock.category"
                         @click="toggleStock(stock, 'international')"
                         :class="{ 'selected-item': isSelected(stock) }"
                         hover
                       >
+                        <template v-slot:prepend>
+                          <v-avatar
+                            :color="isSelected(stock) ? 'primary' : 'grey'"
+                            size="32"
+                            class="mr-3"
+                          >
+                            {{ index + 1 }}
+                          </v-avatar>
+                        </template>
                       </v-list-item>
                     </v-list>
                   </v-card-text>
                 </v-card>
               </v-col>
             </v-row>
+
+            <div class="text-center mt-6">
+              <v-btn
+                color="primary"
+                size="large"
+                :disabled="selectedStocks.length < 3"
+                @click="handleSubmit"
+              >
+                등록하기
+              </v-btn>
+            </div>
           </v-col>
         </v-row>
-
-        <div class="text-center mt-6">
-          <v-btn
-            color="white"
-            class="black--text"
-            size="large"
-            :disabled="selectedStocks.length < 3"
-            @click="handleSubmit"
-          >
-            등록하기
-          </v-btn>
-        </div>
       </v-col>
     </v-row>
   </v-container>
 </template>
 
-<script>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import apiClient from '@/api';
-import SearchBar from '@/components/SearchBar.vue';
-
-export default {
-  name: 'UserInitView',
-  components: {
-    SearchBar,
-  },
-  setup() {
-    const router = useRouter();
-    const stocks = ref([]);
-    const selectedDomestic = ref([]);
-    const selectedInternational = ref([]);
-
-    const domesticStocks = computed(() => 
-      stocks.value.filter(stock => stock.market === 'Domestic').slice(0, 100)
-    );
-
-    const internationalStocks = computed(() => 
-      stocks.value.filter(stock => stock.market === 'International').slice(0, 100)
-    );
-
-    const selectedStocks = computed(() => [
-      ...selectedDomestic.value,
-      ...selectedInternational.value
-    ]);
-
-    const isSelected = (stock) => {
-      return selectedStocks.value.some(s => s.code === stock.code);
-    };
-
-    const toggleStock = (stock, type) => {
-      const selectedArray = type === 'Domestic' ? selectedDomestic : selectedInternational;
-      const index = selectedArray.value.findIndex(s => s.code === stock.code);
-      
-      if (index === -1) {
-        selectedArray.value.push(stock);
-      } else {
-        selectedArray.value.splice(index, 1);
-      }
-    };
-
-    const removeStock = (stock) => {
-      const domesticIndex = selectedDomestic.value.findIndex(s => s.code === stock.code);
-      if (domesticIndex !== -1) {
-        selectedDomestic.value.splice(domesticIndex, 1);
-        return;
-      }
-      
-      const internationalIndex = selectedInternational.value.findIndex(s => s.code === stock.code);
-      if (internationalIndex !== -1) {
-        selectedInternational.value.splice(internationalIndex, 1);
-      }
-    };
-
-    const fetchStocks = async () => {
-      try {
-        const response = await apiClient.get('/stocks/stocks/');
-        stocks.value = response.data;
-      } catch (error) {
-        console.error('주식 데이터 로드 실패:', error);
-        if (error.response?.status === 401) {
-          router.push({ name: 'Login' });
-        }
-      }
-    };
-
-    const handleSubmit = async () => {
-      try {
-        // 선택된 주식들을 user_stock 테이블에 저장
-        const promises = selectedStocks.value.map(stock => 
-          apiClient.post('/stocks/user-stocks/', {
-            stock_code: stock.code
-          })
-        );
-        
-        await Promise.all(promises);
-        router.push({ name: 'Main' });
-      } catch (error) {
-        console.error('관심 기업 등록 실패:', error);
-        if (error.response?.status === 401) {
-          router.push({ name: 'Login' });
-        }
-      }
-    };
-
-    const handleSearchResultClick = (stock) => {
-      const type = stock.market === 'Domestic' ? 'domestic' : 'international';
-      toggleStock(stock, type);
-    };
-
-    onMounted(() => {
-      fetchStocks();
-    });
-
-    return {
-      domesticStocks,
-      internationalStocks,
-      selectedDomestic,
-      selectedInternational,
-      selectedStocks,
-      handleSubmit,
-      toggleStock,
-      removeStock,
-      isSelected,
-      handleSearchResultClick,
-    };
-  },
-};
-</script>
-
 <style scoped>
-/* 기존 스타일 대체 */
+/* 기존 스타일을 InterestListView 스타일로 업데이트 */
 .fill-height {
   min-height: 100vh;
 }
@@ -231,64 +234,73 @@ export default {
   background-position: center;
 }
 
-/* 카드 스타일 수정 */
+/* 카드 스타일 */
 .v-card {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-  color: white !important;
-  border-radius: 8px;
-  box-shadow: 0px 0px 200px #6439ff60 !important;
+  background: linear-gradient(to right bottom, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.5)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
 }
 
-/* 텍스트 색상 수정 */
+/* 텍스트 스타일 */
 .text-h4, .text-subtitle-1, .text-caption {
   color: white !important;
 }
 
-/* 검색 결과 카드 스타일 */
-.search-results {
+/* 리스트 스타일 */
+.v-list {
+  background-color: transparent !important;
+}
+
+.selected-stocks-list {
   background-color: rgba(0, 0, 0, 0.5) !important;
+  padding: 8px;
+  border-radius: 8px;
   backdrop-filter: blur(10px);
 }
 
-.search-results .v-list-item {
-  color: white !important;
-}
-
-.search-results .v-list-subheader {
-  color: white !important;
-  background-color: rgba(100, 57, 255, 0.1) !important;
-  font-weight: bold;
-}
-
-/* 리스트 아이템 스타일 */
-.v-list-item {
-  color: white !important;
-}
-
-.selected-item {
-  background-color: rgba(100, 57, 255, 0.2) !important;
-  border-left: 4px solid #6439ff !important;
-}
-
-.v-list-item:hover {
-  cursor: pointer;
-  background-color: rgba(100, 57, 255, 0.1) !important;
-}
-
-/* 스크롤 리스트 */
 .scrollable-list {
   max-height: 400px;
   overflow-y: auto;
 }
 
-/* 선택된 주식 리스트 */
-.selected-stocks-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-start;
-  background-color: transparent !important;
+/* 리스트 아이템 스타일 */
+:deep(.v-list-item) {
+  color: white !important;
+}
+
+:deep(.v-list-item-title) {
+  color: white !important;
+}
+
+:deep(.v-list-item-subtitle) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.selected-item {
+  background: linear-gradient(to right, rgba(100, 57, 255, 0.3), rgba(100, 57, 255, 0.1)) !important;
+  border-left: 4px solid #6439ff !important;
+}
+
+:deep(.v-list-item--hover) {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 스크롤바 스타일 */
+.scrollable-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 57, 255, 0.3);
+  border-radius: 3px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 57, 255, 0.5);
 }
 
 /* 검색 필드 스타일 */
@@ -315,84 +327,110 @@ export default {
   background-color: transparent !important;
 }
 
-/* 스크롤바 스타일링 */
-:deep(.scrollable-list::-webkit-scrollbar) {
-  width: 8px;
+/* 카드 내부 스타일 */
+:deep(.v-card-title) {
+  color: white;
+  font-size: 1.2rem;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-:deep(.scrollable-list::-webkit-scrollbar-track) {
-  background: rgba(255, 255, 255, 0.1);
+:deep(.v-card-text) {
+  color: rgba(255, 255, 255, 0.8);
 }
 
-:deep(.scrollable-list::-webkit-scrollbar-thumb) {
-  background-color: rgba(100, 57, 255, 0.5);
-  border-radius: 4px;
+/* 반응형 디자인 */
+@media (max-width: 960px) {
+  .scrollable-list {
+    height: 400px;
+  }
+  
+  .stock-list-card {
+    margin-bottom: 16px;
+  }
 }
 
-:deep(.scrollable-list::-webkit-scrollbar-thumb:hover) {
-  background-color: rgba(100, 57, 255, 0.7);
+@media (max-width: 600px) {
+  .scrollable-list {
+    height: 300px;
+  }
 }
 
-/* 리스트 관련 스타일 수정/추가 */
-
-/* 리스트 컨테이너 배경 */
-.v-list {
-  background-color: rgba(0, 0, 0, 0.5) !important;
+/* 선택된 주식 그리드 스타일 */
+.selected-stocks-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
+  border-radius: 12px;
   backdrop-filter: blur(10px);
-  border-radius: 8px;
 }
 
-/* 검색 결과 리스트 */
-.search-results {
-  background-color: rgba(0, 0, 0, 0.5) !important;
-  backdrop-filter: blur(10px);
+.selected-stock-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(100, 57, 255, 0.2), rgba(100, 57, 255, 0.1));
+  border: 1px solid rgba(100, 57, 255, 0.3);
+  border-radius: 20px;
+  color: white;
+  transition: all 0.3s ease;
 }
 
-.search-results .v-list {
-  background-color: transparent !important;
+.selected-stock-chip:hover {
+  background: linear-gradient(135deg, rgba(100, 57, 255, 0.3), rgba(100, 57, 255, 0.2));
+  transform: translateY(-2px);
 }
 
-/* 선택된 주식 리스트 */
-.selected-stocks-list {
-  background-color: rgba(0, 0, 0, 0.5) !important;
-  padding: 8px;
-  border-radius: 8px;
+.stock-name {
+  font-weight: 500;
 }
 
-/* 스크롤 리스트 배경 */
-.scrollable-list {
-  background-color: rgba(0, 0, 0, 0.5) !important;
+.stock-code {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9em;
 }
 
-/* 리스트 아이템 hover 효과 */
-.v-list-item:hover {
-  background-color: rgba(100, 57, 255, 0.2) !important;
+/* 제목 스타일 개선 */
+.text-h4 {
+  font-family: 'Pretendard', sans-serif;
+  font-weight: 700 !important;
+  background: linear-gradient(45deg, #fff, #e0e0e0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
 }
 
-/* 선택된 아이템 스타일 */
-.selected-item {
-  background-color: rgba(100, 57, 255, 0.3) !important;
-  border-left: 4px solid #6439ff !important;
+.text-subtitle-1 {
+  font-family: 'Pretendard', sans-serif;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
-/* 카드 내부 리스트 영역 */
-.v-card-text {
-  background-color: rgba(0, 0, 0, 0.3) !important;
-  border-radius: 0 0 8px 8px;
+.text-caption {
+  font-family: 'Pretendard', sans-serif;
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* 리스트 서브헤더 */
-.v-list-subheader {
-  background-color: rgba(0, 0, 0, 0.3) !important;
-  color: white !important;
+/* 버튼 스타일 개선 */
+:deep(.v-btn.v-btn--size-large) {
+  background: linear-gradient(135deg, #6439ff, #4f29cc) !important;
+  box-shadow: 0 4px 20px rgba(100, 57, 255, 0.4);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
 
-/* 검색 결과 리스트 스타일 수정 */
-:deep(.v-list-item-title) {
-  color: white !important;
+:deep(.v-btn.v-btn--size-large:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(100, 57, 255, 0.5);
 }
 
-:deep(.v-list-item-subtitle) {
-  color: rgba(255, 255, 255, 0.7) !important;
+:deep(.v-btn.v-btn--size-large:disabled) {
+  background: linear-gradient(135deg, #4a4a4a, #3a3a3a) !important;
+  opacity: 0.7;
 }
 </style>

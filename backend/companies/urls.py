@@ -1,15 +1,18 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import UserInterestViewSet, CompanyViewSet, stock_data, stock_prediction, recommended_news, chatbot
-
-router = DefaultRouter()
-router.register(r'interests', UserInterestViewSet, basename='userinterest')
-router.register(r'companies', CompanyViewSet, basename='company')
+from django.urls import path
+from .views import (
+    stock_data, 
+    stock_prediction, 
+    stock_current_price, 
+    stock_intraday_data, 
+    stock_indicators,
+    get_news_sentiment
+)
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('stock/<str:ticker>/', stock_data, name='stock-data'),
-    path('stock/<str:ticker>/predict/', stock_prediction, name='stock-prediction'), 
-    path('news/recommend/', recommended_news, name='recommended-news'),
-    path('chatbot/', chatbot, name='chatbot'),
+    path('stock/', stock_data, name='stock-data'),
+    path('stock/<str:stock_code>/predict/', stock_prediction, name='stock-prediction'),
+    path('stock/current/', stock_current_price, name='stock-current-price'),
+    path('stock/intraday/', stock_intraday_data, name='stock-intraday-data'),
+    path('stock/indicators/', stock_indicators, name='stock_indicators'),
+    path('news/sentiment/', get_news_sentiment, name='news-sentiment'),
 ] 
