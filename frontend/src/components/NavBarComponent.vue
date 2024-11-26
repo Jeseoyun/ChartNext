@@ -35,7 +35,8 @@ export default {
       this.$router.push({ name: 'Login' });
     },
     logout() {
-      // 로그아웃 로직 구현
+      const userStore = useUserStore();
+      userStore.logout();
       this.$router.push({ name: 'Home' });
     }
   },
