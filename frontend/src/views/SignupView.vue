@@ -136,7 +136,7 @@ export default {
           email: `${this.username}@example.com`
         };
         
-        const signupResponse = await apiClient.post('/api/auth/registration/', signupData);
+        const signupResponse = await apiClient.post('/auth/registration/', signupData);
         console.log('회원가입 응답:', signupResponse.data);
         
         await this.userStore.login(this.username, this.password1);
