@@ -475,73 +475,28 @@ sudo service postgresql restart
 ### 구조
 ```commandline
 chart_next_project/
-├── chart_next/       # Django 프로젝트 폴더
-│   ├── __init__.py
-│   ├── asgi.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── accounts/         # 사용자 인증 및 관리 앱
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations/
-├── stock/            # 주식 데이터 및 뉴스 관련 앱
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── utils.py
-│   ├── views.py
-│   ├── urls.py
-│   └── migrations/
-├── manage.py
-└── frontend/         # Vue 3 + Vite 프론트엔드 폴더
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    └── src/
-        ├── main.js
-        ├── App.vue
-        ├── axios.js
-        ├── router/
-        │   └── index.js
-        ├── store/
-        │   └── index.js
-        └── components/
-            ├── Home.vue
-            ├── Register.vue
-            ├── Login.vue
-            ├── InterestedCompanies.vue
-            ├── StockChart.vue
-            └── CompanyNews.vue
+├── frontend/                # Vue.js 프론트엔드
+│   ├── src/
+│   │   ├── components/     # 재사용 가능한 컴포넌트
+│   │   │   └── StockChart.vue  # 주식 차트 컴포넌트
+│   │   ├── views/         # 페이지 컴포넌트
+│   │   │   ├── HomeView.vue    # 메인 페이지
+│   │   │   ├── ChatbotView.vue # 챗봇 페이지
+│   │   │   ├── NewsDetailView.vue  # 뉴스 상세 페이지
+│   │   │   ├── MainView.vue    # 대시보드 페이지
+│   │   │   ├── StockDetailView.vue # 주식 상세 페이지
+│   │   │   ├── UserInitView.vue    # 사용자 초기 설정
+│   │   │   └── InterestListView.vue # 관심 목록
+│   │   └── assets/        # 정적 파일
+│   └── package.json
+│
+├── backend/                # Django 백엔드
+│   ├── stocks/            # 주식 관련 앱
+│   │   └── management/
+│   │       └── commands/  # 커스텀 명령어
+│   │           └── crawl_stocks.py  # 주식 크롤링
+│   └── manage.py
+│
+└── scripts/               # 설치 및 설정 스크립트
+    └── install.sh         # 설치 스크립트
 ```
-
-<br />
-
-
-### 1. chatbot.py
-> 
-
-<br />
-
-### 2. document_store.py
-> 
-
-<br />
-
-### 3. preprocessing.py
-> 
-
-<br />
-
-### 4. pyproject.toml
-> 
-
-<br />
-
-### 5. poetry.lock
-> 
