@@ -10,10 +10,12 @@ const router = useRouter();
 const userStocks = ref([]);
 const stockPrices = ref({});
 const trendingNews = ref([]);
+const hotTopics = ref([]);
 
 // 로딩 상태 변수 추가
 const isLoadingStocks = ref(true);
 const isLoadingNews = ref(true);
+const isLoadingTopics = ref(true);
 
 // 사용자의 관심 종목 로드
 const loadUserStocks = async () => {
@@ -98,9 +100,23 @@ const goToNewsDetail = (articleId) => {
   });
 };
 
+// 핫 토픽 로드 함수
+const loadHotTopics = async () => {
+  isLoadingTopics.value = true;
+  try {
+    const response = await apiClient.get('/news/hot-topics/');
+    hotTopics.value = response.data;
+  } catch (error) {
+    console.error('핫 토픽 로드 실패:', error);
+  } finally {
+    isLoadingTopics.value = false;
+  }
+};
+
 onMounted(() => {
   loadUserStocks();
   loadTrendingNews();
+  loadHotTopics();
 });
 </script>
 
@@ -117,29 +133,40 @@ onMounted(() => {
         </div>
         
         <div class="dashboard">
-        <!--
-          <v-card class="dashboard-card">
-            <v-card-title>오늘의 이슈</v-card-title>
+          <v-card class="dashboard-card hot-topics-card">
+            <v-card-title>오늘의 핫 토픽</v-card-title>
             <v-card-text>
-              <v-list>
-                <v-list-item v-for="i in 3" :key="i">
-                  <v-list-item-title>주요 이슈 {{ i }}</v-list-item-title>
-                </v-list-item>
-              </v-list>
+              <div v-if="isLoadingTopics" class="loading-container">
+                <v-progress-circular
+                  indeterminate
+                  color="primary"
+                  size="32"
+                ></v-progress-circular>
+                <span class="loading-text">핫 토픽을 분석하는 중...</span>
+              </div>
+              <div v-else-if="hotTopics.length > 0" class="hot-topics">
+                <div v-for="(topic, index) in hotTopics" :key="index" class="topic-item">
+                  <div class="topic-header">
+                    <v-chip
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      class="topic-category"
+                    >
+                      {{ topic.category }}
+                    </v-chip>
+                  </div>
+                  <h3 class="topic-title">{{ topic.title }}</h3>
+                  <p class="topic-summary">{{ topic.summary }}</p>
+                </div>
+              </div>
+              <div v-else class="no-topics">
+                <v-icon size="40" color="grey">mdi-newspaper-variant-outline</v-icon>
+                <p>오늘의 핫 토픽이 없습니다</p>
+              </div>
             </v-card-text>
           </v-card>
 
-          <v-card class="dashboard-card">
-            <v-card-title>내 관심기업 뉴스 동향</v-card-title>
-            <v-card-text>
-              <v-list>
-                <v-list-item v-for="i in 3" :key="i">
-                  <v-list-item-title>뉴스 동향 {{ i }}</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-card-text>
-          </v-card>
-          -->
           <v-card class="dashboard-card stock-card">
             <v-card-title class="d-flex align-center justify-space-between">
               <span>내 관심기업 주가</span>
@@ -562,5 +589,60 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
   font-family: 'AppleSDGothicNeoB', sans-serif;
+}
+
+.hot-topics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.topic-item {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  height: 100%;
+}
+
+.topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.topic-category {
+  font-size: 0.8rem;
+}
+
+.topic-title {
+  font-size: 1.1rem;
+  color: white;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.topic-summary {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+.no-topics {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.no-topics p {
+  margin-top: 12px;
+}
+
+.hot-topics-card {
+  grid-column: span 2;
 }
 </style>
