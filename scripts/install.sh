@@ -125,13 +125,15 @@ sudo chmod 644 /usr/local/spark/jars/postgresql-42.7.3.jar
 sudo chown -R $USER:$USER /usr/local/spark/jars
 sudo chmod 644 /usr/local/spark/jars/postgresql-42.7.3.jar
 
+curl -sSL https://install.python-poetry.org | python3 -
+
 # 변경 사항 적용
 source ~/.bashrc
 
 echo "설치가 완료되었습니다."
-echo "다음 단계를 순서대로 진행하세요:"
+echo "다음 단계를 순서대로 진행하세요(README.md 참고):"
 echo ""
-echo "cd backend"
+echo "cd ../backend/"
 echo "poetry install"
 echo "poetry shell"
 echo ""
