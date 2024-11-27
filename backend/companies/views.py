@@ -26,6 +26,7 @@ import pandas_ta as ta
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from django.db.models import Q
+from django.utils import timezone  # 추가
 
 # 전역 변수로 토큰 정보 저장
 _access_token = None
@@ -486,46 +487,61 @@ def get_news_sentiment(request):
         if not stock_code:
             return Response({'error': '종목 코드가 필요합니다.'}, status=400)
 
-        # 최근 10일 동안의 뉴스만 가져오기
-        end_date = datetime.now()
+        # 시간대를 명시적으로 설정
+        end_date = timezone.now()
         start_date = end_date - timedelta(days=10)
         
-        # NewsArticle 모델에서 뉴스 검색
-        news_articles = NewsArticle.objects.filter(
-            Q(time__range=(start_date, end_date)),
-            Q(title__icontains=stock_code) | Q(contents__text__icontains=stock_code)
-        ).order_by('-time')[:10]
+        # NewsArticle 모델에서 뉴스 검색 - prefetch_related 사용
+        news_articles = NewsArticle.objects.prefetch_related('contents').filter(
+            time__range=(start_date, end_date)
+        ).filter(
+            Q(title__icontains=stock_code) | 
+            Q(contents__text__icontains=stock_code)
+        ).distinct().order_by('-time')[:10]
 
         if not news_articles:
-            return Response({'sentiment_score': 0})  # 뉴스가 없으면 중립 반환
+            return Response({
+                'sentiment_score': 0,
+                'analyzed_articles': 0,
+                'message': '분석 가능한 뉴스가 없습니다.'
+            })
 
         # 감성 분석 수행
         total_sentiment = 0
         analyzed_count = 0
 
         for article in news_articles:
-            # 제목과 내용을 합쳐서 분석
-            contents = ' '.join([content.text for content in article.contents.all()])
-            full_text = f"{article.title} {contents}"
-            sentiment = analyze_sentiment(full_text)
-            total_sentiment += sentiment
-            analyzed_count += 1
+            try:
+                # 제목과 내용을 합쳐서 분석
+                contents = ' '.join([content.text for content in article.contents.all()])
+                full_text = f"{article.title} {contents}"
+                sentiment = analyze_sentiment(full_text)
+                if sentiment is not None:  # None 체크 추가
+                    total_sentiment += sentiment
+                    analyzed_count += 1
+            except Exception as e:
+                print(f"개별 뉴스 분석 중 오류: {str(e)}")
+                continue
 
         # 최종 감성 점수 계산 (-10 ~ 10 범위로 정규화)
         if analyzed_count > 0:
             final_score = (total_sentiment / analyzed_count) * 10
-            # -10과 10 사이로 제한
             final_score = max(min(final_score, 10), -10)
         else:
             final_score = 0
 
         return Response({
-            'sentiment_score': final_score,
-            'analyzed_articles': analyzed_count
+            'sentiment_score': round(final_score, 2),  # 소수점 2자리로 반올림
+            'analyzed_articles': analyzed_count,
+            'time_range': {
+                'start': start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'end': end_date.strftime('%Y-%m-%d %H:%M:%S')
+            }
         })
 
     except Exception as e:
-        print(f"감성 분석 중 오류 발생: {str(e)}")  # 디버깅을 위한 로그 추가
+        print(f"감성 분석 중 오류 발생: {str(e)}")
         return Response({
-            'error': f'감성 분석 중 오류가 발생했습니다: {str(e)}'
+            'error': f'감성 분석 중 오류가 발생했습니다: {str(e)}',
+            'detail': str(e)
         }, status=500)
