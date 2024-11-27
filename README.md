@@ -102,9 +102,17 @@ git push
 <summary>접기/펼치기</summary>
 <div markdown="1">
 
+### 0. SQL Server Client(mssql) 익스텐션 설치
+(VSCODE 기준)
+
+![img](docs/sql_setting.png)
+> 위 이미지와 같이 설정 후 save
+
+
 ### 1. 설치 스크립트 실행
 ```bash
 cd scripts
+chmod +x install.sh
 ./install.sh
 ```
 
@@ -144,34 +152,78 @@ hdfs dfs -chmod -R 777 /news_data
 http://localhost:9870
 ```
 
-### 3. 주식데이터 PostgreSQL DB에 삽입
 ```bash
-cd scripts
+# 6. 크롤링한 기사 데이터 hdfs로 저장해서 초기화
+# 루트 디렉토리에서 진행
+hdfs dfs -put articles.json /news_data/raw/
 ```
 
-```bash 
-psql -U [username] -d [database_name] -f [backup_file].sql
+```bash
+# 7. spark를 통해 hdfs -> postgresql로 저장
+# 루트 디렉토리에서 진행
+spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar backend/news_crawling/spark/load_to_postgres.py
+```
+
+
+### 3. 주식데이터 PostgreSQL DB에 삽입
+```bash
+cd ../scripts
+```
+
+### 4. PostgreSQL 인증 방식 변경
+PostgreSQL의 peer 인증 방식의 오류 방지
+
+```bash
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+```
+
+파일에서 다음과 같은 줄들을 찾음
+```bash
+local   all             postgres                                peer
+local   all             all                                     peer
+```
+
+peer를 md5로 변경
+```bash
+local   all             postgres                                md5
+local   all             all                                     md5
+```
+
+3. PostgreSQL 재시작
+```bash
+sudo service postgresql restart
 ```
 
 ```bash
 psql -U chart_next_user -d chart_next -f stocks_stock.sql
 ```
->failed: FATAL:  Peer authentication failed for user "postgres" 오류 발생시 트러블 슈팅 참고
 
-### 4. django 프로젝트 실행
+### 5. env 생성
+> final-project(루트 디렉토리)에서
 ```bash
-cd backend
-poetry install
-poetry shell
+cp .env.example .env
+```
+.env에 openai-api key를 입력
+
+### 6. 학습된 AI 모델 다운로드
+```bash
+cd sentiment/sentiment_model/
+gdown "https://drive.google.com/uc?id=10A0vDyWpS3IV-Jt61xXoZx9AbZFyQc7I"
+```
+
+### 7. django 프로젝트 실행
+```bash
+cd ../../backend
 python manage.py migrate
 python manage.py runserver
 ```
 > poetry install에서 오류날 경우 트러블 슈팅 참고
 
-### 5. vue 프로젝트 실행 
+### 8. vue 프로젝트 실행 
 > (새로운 터미널 창에서 진행)
 ```bash
 cd frontend
+nvm install --lts
 npm install
 npm run dev
 ```
@@ -351,32 +403,28 @@ jps
 - DataNode
 - SecondaryNameNode
 
-### 3. Peer authentication failed for user "postgres"
-PostgreSQL의 peer 인증 방식 때문에 발생하는 오류.
-WSL 환경에서 다음과 같이 해결 가능
 
+### 3. migrate 및 DB 오류
+DB 삭제하고 새로 시작
 ```bash
-sudo nano /etc/postgresql/[버전]/main/pg_hba.conf
-```
-```bash
-sudo nano /etc/postgresql/14/main/pg_hba.conf
+# postgresql 접속
+# chart_next를 삭제하려면 해당 데이터베이스에 접속 중이면 안 됨.
+sudo -u postgres psql -d postgres
 ```
 
-파일에서 다음과 같은 줄들을 찾음
 ```bash
-local   all             postgres                                peer
-local   all             all                                     peer
+# 데이터베이스 다시 생성
+CREATE DATABASE chart_next;
 ```
 
-이것들을 다음과 같이 변경
 ```bash
-local   all             postgres                                md5
-local   all             all                                     md5
+# 권한 부여
+GRANT ALL PRIVILEGES ON DATABASE chart_next TO chart_next_user;
 ```
 
-3. PostgreSQL 재시작
 ```bash
-sudo service postgresql restart
+# PostgreSQL 종료
+\q
 ```
 
 </div>
