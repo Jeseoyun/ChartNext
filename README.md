@@ -158,20 +158,34 @@ http://localhost:9870
 hdfs dfs -put articles.json /news_data/raw/
 ```
 
+### 3. env 생성
+> final-project(루트 디렉토리)에서
 ```bash
-# 7. spark를 통해 hdfs -> postgresql로 저장
-# 루트 디렉토리에서 진행
-spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar backend/news_crawling/spark/load_to_postgres.py
+cp .env.example .env
+```
+.env에 openai-api key를 입력
+
+### 4. 학습된 AI 모델 다운로드
+```bash
+cd sentiment/sentiment_model/
+gdown "https://drive.google.com/uc?id=10A0vDyWpS3IV-Jt61xXoZx9AbZFyQc7I"
 ```
 
+### 5. django 프로젝트 실행
+```bash
+cd ../../backend
+python manage.py migrate
+python manage.py runserver
+```
+> poetry install에서 오류날 경우 트러블 슈팅 참고
 
-### 3. 주식데이터 PostgreSQL DB에 삽입
+### 6. 주식데이터 PostgreSQL DB에 삽입
 ```bash
 cd ../scripts
 ```
 
-### 4. PostgreSQL 인증 방식 변경
-PostgreSQL의 peer 인증 방식의 오류 방지
+> PostgreSQL 인증 방식 변경
+> PostgreSQL의 peer 인증 방식의 오류 방지
 
 ```bash
 sudo nano /etc/postgresql/14/main/pg_hba.conf
@@ -198,26 +212,14 @@ sudo service postgresql restart
 psql -U chart_next_user -d chart_next -f stocks_stock.sql
 ```
 
-### 5. env 생성
-> final-project(루트 디렉토리)에서
-```bash
-cp .env.example .env
-```
-.env에 openai-api key를 입력
 
-### 6. 학습된 AI 모델 다운로드
-```bash
-cd sentiment/sentiment_model/
-gdown "https://drive.google.com/uc?id=10A0vDyWpS3IV-Jt61xXoZx9AbZFyQc7I"
-```
 
-### 7. django 프로젝트 실행
+### 7. 뉴스 크롤링 데이터 전처리와 함꼐 DB에 저장 
 ```bash
-cd ../../backend
-python manage.py migrate
-python manage.py runserver
+# spark를 통해 hdfs -> postgresql로 저장
+# 루트 디렉토리에서 진행
+spark-submit --jars /usr/local/spark/jars/postgresql-42.7.3.jar backend/news_crawling/spark/load_to_postgres.py
 ```
-> poetry install에서 오류날 경우 트러블 슈팅 참고
 
 ### 8. vue 프로젝트 실행 
 > (새로운 터미널 창에서 진행)
@@ -410,6 +412,22 @@ DB 삭제하고 새로 시작
 # postgresql 접속
 # chart_next를 삭제하려면 해당 데이터베이스에 접속 중이면 안 됨.
 sudo -u postgres psql -d postgres
+```
+
+could not change directory to "/home/taeyeong/final-project/backend": Permission denied
+오류 발생시
+
+```bash
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+```
+에서 md5를 다시 peer로 바꿔줌
+
+```bash
+sudo service postgresql restart
+```
+
+```bash
+DROP DATABASE chart_next;
 ```
 
 ```bash
