@@ -361,8 +361,8 @@ onMounted(() => {
                               </div>
                               <div class="article-image-container">
                                 <v-img
-                                  v-if="article.image_url"
-                                  :src="article.image_url"
+                                  v-if="article.images && article.images.length > 0"
+                                  :src="article.images[0].src"
                                   height="220"
                                   cover
                                   class="article-image"
@@ -375,6 +375,13 @@ onMounted(() => {
                                     ></v-img>
                                   </template>
                                 </v-img>
+                                <v-img
+                                  v-else
+                                  src="@/assets/news_placeholder.jpg"
+                                  height="220"
+                                  cover
+                                  class="article-image"
+                                ></v-img>
                               </div>
                             </v-card>
                           </v-carousel-item>
@@ -1264,7 +1271,7 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* 주식 관련 텍스트 스타일 */
+/* 주식 관련 텍스트 스���일 */
 .stock-name {
   font-family: 'AppleSDGothicNeoM', sans-serif;
   font-size: 1rem;
