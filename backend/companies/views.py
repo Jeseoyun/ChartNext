@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets, permissions, filters
-from .models import UserInterest, Company, StockPrice
+from .models import UserInterest, StockPrice
+from stocks.models import Stock  # Stock 모델 임포트 추가
 from news.models import NewsArticle  # News 모델 대신 NewsArticle 모델을 import
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -329,7 +330,7 @@ def stock_intraday_data(request):
         is_korean = stock_code.isdigit()
         
         if is_korean:
-            # 한국 주식의 경우 코드에 .KS 추가
+            # 한 주식의 경우 코드에 .KS 추가
             ticker = yf.Ticker(f"{stock_code}.KS")
         else:
             ticker = yf.Ticker(stock_code)
@@ -487,16 +488,31 @@ def get_news_sentiment(request):
         if not stock_code:
             return Response({'error': '종목 코드가 필요합니다.'}, status=400)
 
-        # 시간대를 명시적으로 설정
-        end_date = timezone.now()
-        start_date = end_date - timedelta(days=10)
+        # 종목 코드로부터 회사명 얻기
+        try:
+            stock = Stock.objects.get(code=stock_code)
+            company_name = stock.name
+        except Stock.DoesNotExist:
+            return Response({'error': '해당 종목 코드를 가진 회사를 찾을 수 없습니다.'}, status=404)
+
+        # 가장 최근 뉴스 기사의 시간을 기준으로 검색
+        latest_news = NewsArticle.objects.order_by('-time').first()
+        if latest_news:
+            end_date = latest_news.time
+            start_date = end_date - timedelta(days=30)  # 기간을 30일로 확장
+        else:
+            return Response({
+                'sentiment_score': 0,
+                'analyzed_articles': 0,
+                'message': '뉴스 데이터가 없습니다.'
+            })
         
-        # NewsArticle 모델에서 뉴스 검색 - prefetch_related 사용
+        # NewsArticle 모델에서 뉴스 검색
         news_articles = NewsArticle.objects.prefetch_related('contents').filter(
             time__range=(start_date, end_date)
         ).filter(
-            Q(title__icontains=stock_code) | 
-            Q(contents__text__icontains=stock_code)
+            Q(title__icontains=company_name) | 
+            Q(contents__text__icontains=company_name)
         ).distinct().order_by('-time')[:10]
 
         if not news_articles:
