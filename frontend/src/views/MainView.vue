@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import apiClient from '@/api';
@@ -80,18 +80,42 @@ const fallingStocks = computed(() =>
 
 const editInterests = () => router.push({ name: 'Interests' });
 
-// 뉴스 데이터 로드 함수
+// 기사 중복 체크를 위한 Set 추가
+const processedArticleIds = ref(new Set());
+
+// 뉴스 데이터 로드 함수 수정
 const loadTrendingNews = async () => {
   isLoadingNews.value = true;
   try {
     const response = await apiClient.get('/news/trending/');
-    trendingNews.value = response.data;
+    // 중복 기사 필터링 로직 추가
+    const filteredNews = response.data.map(newsItem => ({
+      ...newsItem,
+      articles: filterDuplicateArticles(newsItem.articles)
+    }));
+    trendingNews.value = filteredNews;
   } catch (error) {
     console.error('뉴스 데이터 로드 실패:', error);
   } finally {
     isLoadingNews.value = false;
   }
 };
+
+// 중복 기사 필터링 함수
+const filterDuplicateArticles = (articles) => {
+  return articles.filter(article => {
+    if (processedArticleIds.value.has(article.id)) {
+      return false;
+    }
+    processedArticleIds.value.add(article.id);
+    return true;
+  });
+};
+
+// 컴포넌트가 언마운트될 때 Set 초기화
+onUnmounted(() => {
+  processedArticleIds.value.clear();
+});
 
 // 기사 상세 페이지로 이동하는 함수
 const goToNewsDetail = (articleId) => {
@@ -1271,7 +1295,7 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* 주식 관련 텍스트 스���일 */
+/* 주식 관련 텍스트 스일 */
 .stock-name {
   font-family: 'AppleSDGothicNeoM', sans-serif;
   font-size: 1rem;
