@@ -215,7 +215,10 @@ def get_trending_company_news(request):
         results = []
         for company_data in top_companies:
             company = company_data['company']
-            articles = NewsArticle.objects.filter(id__in=company_data['articles'])
+            articles = NewsArticle.objects.filter(id__in=company_data['articles'][:3]).prefetch_related(
+                Prefetch('contents', queryset=NewsContent.objects.order_by('refid')),
+                Prefetch('images', queryset=NewsImage.objects.order_by('refid'))
+            )
             
             # 뉴스 내용 통합
             combined_content = f"{company} 관련 최근 뉴스 요약:\n"
@@ -242,11 +245,14 @@ def get_trending_company_news(request):
             
             summary = response.choices[0].message.content
             
+            # 기사 시리얼라이징
+            articles_serializer = NewsArticleSerializer(articles, many=True)
+
             results.append({
                 'company': company,
                 'mention_count': company_data['count'],
                 'summary': summary,
-                'article_ids': company_data['articles'][:3]
+                'articles': articles_serializer.data,
             })
         
         return Response(results)
