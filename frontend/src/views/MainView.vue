@@ -167,8 +167,10 @@ onMounted(() => {
       </video>
       <div class="content">
         <div class="fixed-header">
-          <LogoComponent />
-          <NavBarComponent />
+          <div class="header-content">
+            <LogoComponent />
+            <NavBarComponent />
+          </div>
         </div>
         
         <div class="dashboard">
@@ -478,6 +480,7 @@ onMounted(() => {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .dashboard {
@@ -487,6 +490,8 @@ onMounted(() => {
   padding: 20px;
   margin-top: 60px;
   background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 20px);
+  max-width: 1400px;
+  width: 100%;
 }
 
 .dashboard-card {
@@ -632,13 +637,40 @@ onMounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 1920px;
+  width: 100%;
   height: 80px;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
   backdrop-filter: blur(8px);
   z-index: 1000;
+  display: flex;
+  justify-content: center;
 }
 
+.header-content {
+  max-width: 1400px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+
+/* 반응형 디자인 수정 */
+@media (max-width: 1440px) {
+  .dashboard {
+    max-width: 95%;
+  }
+  
+  .header-content {
+    max-width: 95%;
+  }
+}
+
+@media (max-width: 960px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+}
 
 .trending-news-item {
   padding: 16px;

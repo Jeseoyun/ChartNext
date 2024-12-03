@@ -48,7 +48,8 @@ export default {
   position: fixed;
   top: 25px;
   width: 400px;
-  left: 565px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 60px;
   font-family: 'AppleSDGothicNeoB', sans-serif;
